@@ -15,7 +15,7 @@
 
 - [x] **Step 0.** Game design, plan, word list (3000 words, 30 batches). Done with Opus on 2026-09-25.
 - [x] **Step 1.** Content tools + pilot batch a1-01 → [steps/01-content-tools.md](steps/01-content-tools.md)
-- [ ] **Step 2.** Game engine: pure modules + tests → [steps/02-engine.md](steps/02-engine.md)
+- [x] **Step 2.** Game engine: pure modules + tests → [steps/02-engine.md](steps/02-engine.md)
 - [ ] **Step 3.** App shell: server, fonts, styles, storage, home, UI check → [steps/03-app-shell.md](steps/03-app-shell.md)
 - [ ] **Step 4.** The drive: first playable version → [steps/04-drive.md](steps/04-drive.md)
 - [ ] **C1.** Content a1-02 … a1-05 → [CONTENT-GUIDE.md](CONTENT-GUIDE.md)
@@ -69,6 +69,7 @@ Token economy:
 
 ## Log
 
+- 2026-09-25: Step 2. `public/js/{rng,day,srs,text,quiz,plan,progress}.js` + `test/engine.test.mjs` (67 tests pass, no DOM/storage/Date.now in the modules). API as in the step file, plus: `extraNewWord({plan,cards,byId,order,leg,rnd})` (adds the extra new word after a right "I know this", updates `shown`/`newCount`); `recordAnswer` only updates cards/plan/leg.stats, so call `legReduce` with the same answer afterwards; `introOrder` sorts by hash(seed:id) so the order stays stable as content grows; `byId` may be an object or a Map; `progress` route args accept an array or `{stops}`; gapOnly new-word check and "know" are `gap`; letterHint hides digits too.
 - 2026-09-25: Step 1. `tools/lib/{words,forms,check}.mjs`, `tools/check-content.mjs`,
   `tools/build-data.mjs`; pilot `content/a1-01.json` (100 words, 0 errors, 0 warnings);
   `public/data/words.json` built (100 words). 13 tests pass. No deviations. Waiting for the
