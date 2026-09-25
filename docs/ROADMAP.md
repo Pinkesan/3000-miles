@@ -30,7 +30,7 @@
 - [x] **Step 4.** The drive: first playable version → [steps/04-drive.md](steps/04-drive.md)
 - [x] **Plan change.** A harder game: DESIGN §1, §3–§10 rewritten, steps 5–15 re-planned. Done with Opus on 2026-09-25.
 - [x] **Step 5.** Road test: ask before teaching, no free miles, start level → [steps/05-road-test.md](steps/05-road-test.md)
-- [ ] **C1.** Content a2-01, b1-01, b2-01 → [CONTENT-GUIDE.md](CONTENT-GUIDE.md)
+- [x] **C1.** Content a2-01, b1-01, b2-01 → [CONTENT-GUIDE.md](CONTENT-GUIDE.md)
 - [ ] **Step 6.** Harder questions: look-alike options, typing, dictation, short hints → [steps/06-harder-questions.md](steps/06-harder-questions.md)
 - [ ] **Step 7.** Score, combo, stars → [steps/07-score.md](steps/07-score.md)
 - [ ] **C2.** Content a2-02, b1-02, b2-02
@@ -87,6 +87,7 @@ Token economy:
 
 ## Log
 
+- 2026-09-25: C1. `content/{a2-01,b1-01,b2-01}.json` (300 words, `npm run check` 0 errors 0 warnings each); `build:data` → 400 words (A1 100, A2 100, B1 100, B2 100); 81 tests pass. Start level B1 now lists 100 words. No deviations.
 - 2026-09-25: Step 5. `quiz.allowedTypes` takes `probe|confirm|check`; `plan.js` rewritten around probe / confirm / check / meet (`CHECK_GAP` 4, `CONFIRM_GAP` 6, `EXTRA_NEW` 10, `LEG_NEW_CAP`, `needsExtraNew`, `extraNewWord` removed, `leg.v = 2`, new event `skip`); `summary.levelTip`; drive: probe with ไม่รู้จักคำนี้ (key 0), "เรียนคำนี้" after a wrong probe, one-button Meet card, old legs without `v: 2` dropped; results: tip + `taught + known` in `canContinue`; home: temporary เริ่มจากระดับ select. ui-check `playLeg` rewritten (probe right/skip/wrong, confirm mile), `resume` and `home` extended; `JS errors: none`. 81 tests pass. Deviations: gap is counted as "items between" (like re-asks), so a check is 4 items after its meet, not 3; the confirm still has the full letter hint until Step 6. Only a1-01 has content, so start level B1 lists 0 words until C1.
 - 2026-09-25: Plan change (Opus). The user played Step 4 and found it too easy. Causes
   found in the code: the Meet card showed the answer 3 items before the only question;
