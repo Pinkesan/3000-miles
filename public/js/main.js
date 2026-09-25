@@ -7,7 +7,8 @@ import { setChildren, h, setTitle } from './ui.js';
 import { loadVoices, pickVoice, speak, stopSpeaking } from './speech.js';
 import { setSound } from './sfx.js';
 import * as home from './screens/home.js';
-import * as placeholder from './screens/placeholder.js';
+import * as drive from './screens/drive.js';
+import * as results from './screens/results.js';
 import * as card from './screens/card.js';
 
 const query = new URLSearchParams(location.search);
@@ -17,8 +18,8 @@ const fixedToday = testMode && query.has('today') ? Number(query.get('today')) :
 
 const ROUTES = {
   home: { screen: home, title: '' },
-  drive: { screen: placeholder, title: 'ขับ' },
-  results: { screen: placeholder, title: 'สรุปช่วง' },
+  drive: { screen: drive, title: 'ขับ' },
+  results: { screen: results, title: 'สรุปช่วง' },
   card: { screen: card, title: 'การ์ดคำศัพท์' },
 };
 
@@ -102,8 +103,8 @@ async function boot() {
   route();
 
   if (testMode) {
-    // Step 4 fills question() and item() in.
-    window.__app = { app, question: () => null, item: () => null };
+    // The drive screen sets app.hooks; the UI check reads the current item and question.
+    window.__app = { app, question: () => app.hooks?.question() ?? null, item: () => app.hooks?.item() ?? null };
   }
 }
 

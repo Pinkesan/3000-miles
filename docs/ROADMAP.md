@@ -17,7 +17,7 @@
 - [x] **Step 1.** Content tools + pilot batch a1-01 → [steps/01-content-tools.md](steps/01-content-tools.md)
 - [x] **Step 2.** Game engine: pure modules + tests → [steps/02-engine.md](steps/02-engine.md)
 - [x] **Step 3.** App shell: server, fonts, styles, storage, home, UI check → [steps/03-app-shell.md](steps/03-app-shell.md)
-- [ ] **Step 4.** The drive: first playable version → [steps/04-drive.md](steps/04-drive.md)
+- [x] **Step 4.** The drive: first playable version → [steps/04-drive.md](steps/04-drive.md)
 - [ ] **C1.** Content a1-02 … a1-05 → [CONTENT-GUIDE.md](CONTENT-GUIDE.md)
 - [ ] **C2.** Content a1-06 … a1-09
 - [ ] **Step 5.** Road trip: route, map, postcards, fuel gauge, streak → [steps/05-road-trip.md](steps/05-road-trip.md)
@@ -69,6 +69,7 @@ Token economy:
 
 ## Log
 
+- 2026-09-25: Step 4. `public/js/screens/{drive,results}.js`, `public/js/summary.js` (pure: `legSummary`, `tankFill`, `tankText`, `queueIds`) + `test/summary.test.mjs`; `screens/placeholder.js` removed; home only treats a saved leg of today as "ขับต่อ". `app.hooks` (set by the drive) backs `__app.item()/question()`. Leg keeps an extra `ids` array for the results word list. UI check scenes `drive` (whole leg, results, reload), `types` (all six question types at 390x844), `resume`, plus a question and results in `mobile`/`dark`; `JS errors: none`. 76 tests pass. Deviations: results odometer rolls with a plain wheel transition (a 9 to 0 wheel scrolls back up); tank is text only. Only the 100 words of a1-01 are playable.
 - 2026-09-25: Step 3. `tools/{serve,get-fonts}.mjs`, `start.bat`, fonts (latin+thai, OFL) in `public/fonts`, `public/{index.html,css/app.css}`, `js/{ui,icons,speech,sfx,store,main}.js`, `screens/{home,card,placeholder}.js`, `components/{wordcard,odometer}.js`, `tools/ui-check.mjs` (scenes home card mobile dark light; `JS errors: none`), `test/store.test.mjs` (72 tests pass). Deviations: `app.say(text, {rate})`/`app.stopSay`/`app.hasVoice()`/`app.ensurePlan()` added to `app`; changing newPerDay on home also updates today's plan while it has no progress; `img/favicon.svg` added (avoids a 404); extra `light` UI scene.
 - 2026-09-25: Step 2. `public/js/{rng,day,srs,text,quiz,plan,progress}.js` + `test/engine.test.mjs` (67 tests pass, no DOM/storage/Date.now in the modules). API as in the step file, plus: `extraNewWord({plan,cards,byId,order,leg,rnd})` (adds the extra new word after a right "I know this", updates `shown`/`newCount`); `recordAnswer` only updates cards/plan/leg.stats, so call `legReduce` with the same answer afterwards; `introOrder` sorts by hash(seed:id) so the order stays stable as content grows; `byId` may be an object or a Map; `progress` route args accept an array or `{stops}`; gapOnly new-word check and "know" are `gap`; letterHint hides digits too.
 - 2026-09-25: Step 1. `tools/lib/{words,forms,check}.mjs`, `tools/check-content.mjs`,

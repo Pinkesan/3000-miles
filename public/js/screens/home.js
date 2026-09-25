@@ -16,7 +16,7 @@ export function render(root, app) {
     ? `วันนี้: ทวนคำค้างให้หมดก่อน (ค้าง ${plan.dueTotal} คำ)`
     : `วันนี้: ทวน ${plan.due.length} คำ · คำใหม่ ${plan.newTarget} คำ`;
 
-  const hasLeg = !!store.state.leg;
+  const hasLeg = store.state.leg?.day === today;
   const planDone = plan.goal > 0 && plan.done >= plan.goal;
   const mainLabel = hasLeg ? 'ขับต่อ' : planDone ? 'ขับเพิ่ม' : plan.legs > 0 ? 'ขับต่อ' : 'ออกเดินทาง';
 
