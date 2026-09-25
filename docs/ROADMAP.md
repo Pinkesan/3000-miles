@@ -19,6 +19,16 @@
 > - **Step 9** ด่านตรวจทุกเมือง: สอบพิมพ์ 15 คำ ถูก 80% ถึงได้โปสการ์ด สอบได้วันละครั้ง
 > - คำศัพท์ระดับ A2 / B1 / B2 มาก่อน A1 ที่เหลือ หลังทำ C1 แล้วให้ตั้ง **เริ่มจากระดับ** ที่หน้าแรกเป็น A2 หรือ B1
 >
+> **ปรับแผนรอบสอง (Opus, 2026-09-25): จำกัดคำใหม่ แต่ไม่จำกัดการเล่น**
+> - คำใหม่ทุกคำต้องกลับมาทวนอีก 5–8 ครั้ง ถ้าเรียน 100 คำในวันเดียว คำทวนจะเพิ่มเป็นสองเท่าไปอีกสองสัปดาห์
+>   ตอนนี้ครบเป้าแล้วกด **ขับเพิ่ม** ได้อีก 1 ช่วงต่อวัน (คำใหม่ 10 คำ) จากเดิมที่ได้ถึง 100 คำ (แก้โค้ดแล้ว)
+> - **Highway Rush** (ตอบเร็ว 60 วินาที ไม่เพิ่มคำใหม่ ไม่กระทบตารางทวน) ย้ายมาทำต่อจาก Step 7
+>   เปิดให้เล่นได้ไม่จำกัดหลังขับครบแผนของวัน
+> - คำใหม่ต่อวันตั้งไว้ 10 หรือ 15 คำพอ เกินนั้นแทบไม่ถึงเร็วขึ้น เพราะคำทวนจะค้างเกิน 100 คำบ่อย
+>
+> **ทดสอบหลายวันโดยไม่แตะเซฟจริง:** เปิดหน้าต่างไม่ระบุตัวตน (Ctrl+Shift+N) แล้วเข้า
+> `http://localhost:5320/?test&today=20721` (20721 คือ 25 ก.ย. 2569) เปลี่ยนเลขเพื่อข้ามวัน ปิดหน้าต่างแล้วข้อมูลทดสอบหายเอง
+>
 > เล่นได้ตอนนี้เลย (ดับเบิลคลิก `start.bat`) · ลงมือถือแบบติดตั้งได้หลัง Step 11
 
 ## Status
@@ -31,8 +41,10 @@
 - [x] **Plan change.** A harder game: DESIGN §1, §3–§10 rewritten, steps 5–15 re-planned. Done with Opus on 2026-09-25.
 - [x] **Step 5.** Road test: ask before teaching, no free miles, start level → [steps/05-road-test.md](steps/05-road-test.md)
 - [x] **C1.** Content a2-01, b1-01, b2-01 → [CONTENT-GUIDE.md](CONTENT-GUIDE.md)
+- [x] **Plan change 2.** Limit new words, not play: one ขับเพิ่ม leg a day (code done), Highway Rush moved up to follow Step 7. Done with Opus on 2026-09-25.
 - [ ] **Step 6.** Harder questions: look-alike options, typing, dictation, short hints → [steps/06-harder-questions.md](steps/06-harder-questions.md)
 - [ ] **Step 7.** Score, combo, stars → [steps/07-score.md](steps/07-score.md)
+- [ ] **Step 12.** Highway Rush: 60-second arcade after the day's plan, three strikes (moved up; the number stays) → [steps/12-highway-rush.md](steps/12-highway-rush.md)
 - [ ] **C2.** Content a2-02, b1-02, b2-02
 - [ ] **Step 8.** Road trip: route, map, postcards, fuel gauge, streak → [steps/08-road-trip.md](steps/08-road-trip.md)
 - [ ] **Step 9.** Checkpoints: an exam at every city → [steps/09-checkpoints.md](steps/09-checkpoints.md)
@@ -40,7 +52,6 @@
 - [ ] **Step 10.** Word list, word detail, settings, backup → [steps/10-words-settings.md](steps/10-words-settings.md)
 - [ ] **Step 11.** Install on the phone: PWA, offline, deploy → [steps/11-pwa-deploy.md](steps/11-pwa-deploy.md)
 - [ ] **C4.** Content a2-04, b1-04, b2-04
-- [ ] **Step 12.** Highway Rush: 60-second arcade, three strikes → [steps/12-highway-rush.md](steps/12-highway-rush.md)
 - [ ] **C5.** Content a2-05, b1-05, b2-05
 - [ ] **C6.** Content a2-06, b1-06, b2-06
 - [ ] **Step 13.** Say it: speaking question type (optional) → [steps/13-say-it.md](steps/13-say-it.md)
@@ -87,6 +98,18 @@ Token economy:
 
 ## Log
 
+- 2026-09-25: Plan change 2 (Opus). The player drove extra legs until the cap of 100 new
+  words a day and had nothing left to play. A 500-day simulation with `srs.js` +
+  `makeDayPlan`: above ~15 new words a day the 100-review cap blocks new words on many days
+  (20 a day: 46–73 of the first 180 days) and gets there barely sooner; a 100-word day
+  doubles the reviews for two weeks. DESIGN §1 rule 9 (limit new words, not play), §5 leg
+  step 2 (one ขับเพิ่ม leg a day: `newCap = newTarget + 10`, none on a backlog day), §7
+  home / results / `#/arcade`, §9. Code: `plan.newCap` / `newLeft` replace `DAY_NEW_CAP`;
+  home shows the `#day-done` note instead of the main button when nothing is left; results
+  use `newLeft`; ui-check scene `done`; 83 tests pass, `JS errors: none`. Step 12 (Highway
+  Rush) moved up after Step 7: opens after the day's plan, its pool skips words due and not
+  graded today, missed words without links until Step 10, no version bump. Steps 08 and 10
+  updated to match (Step 10's time line per pace comes from the simulation).
 - 2026-09-25: C1. `content/{a2-01,b1-01,b2-01}.json` (300 words, `npm run check` 0 errors 0 warnings each); `build:data` → 400 words (A1 100, A2 100, B1 100, B2 100); 81 tests pass. Start level B1 now lists 100 words. No deviations.
 - 2026-09-25: Step 5. `quiz.allowedTypes` takes `probe|confirm|check`; `plan.js` rewritten around probe / confirm / check / meet (`CHECK_GAP` 4, `CONFIRM_GAP` 6, `EXTRA_NEW` 10, `LEG_NEW_CAP`, `needsExtraNew`, `extraNewWord` removed, `leg.v = 2`, new event `skip`); `summary.levelTip`; drive: probe with ไม่รู้จักคำนี้ (key 0), "เรียนคำนี้" after a wrong probe, one-button Meet card, old legs without `v: 2` dropped; results: tip + `taught + known` in `canContinue`; home: temporary เริ่มจากระดับ select. ui-check `playLeg` rewritten (probe right/skip/wrong, confirm mile), `resume` and `home` extended; `JS errors: none`. 81 tests pass. Deviations: gap is counted as "items between" (like re-asks), so a check is 4 items after its meet, not 3; the confirm still has the full letter hint until Step 6. Only a1-01 has content, so start level B1 lists 0 words until C1.
 - 2026-09-25: Plan change (Opus). The user played Step 4 and found it too easy. Causes

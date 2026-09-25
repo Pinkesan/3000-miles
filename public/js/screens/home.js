@@ -2,7 +2,7 @@
 import { h, setChildren, th, en, thaiDay } from '../ui.js';
 import { countMiles } from '../srs.js';
 import { odometer } from '../components/odometer.js';
-import { introOrder } from '../plan.js';
+import { introOrder, newLeft } from '../plan.js';
 
 const PER_DAY = [5, 10, 15, 20, 30];
 const LEVELS = ['A1', 'A2', 'B1', 'B2'];
@@ -20,6 +20,8 @@ export function render(root, app) {
 
   const hasLeg = store.state.leg?.day === today;
   const planDone = plan.goal > 0 && plan.done >= plan.goal;
+  // after the plan and its one ขับเพิ่ม leg, nothing is left to drive today (DESIGN §5)
+  const dayDone = planDone && !hasLeg && !newLeft(plan, store.state.cards, app.order);
   const mainLabel = hasLeg ? 'ขับต่อ' : planDone ? 'ขับเพิ่ม' : plan.legs > 0 ? 'ขับต่อ' : 'ออกเดินทาง';
 
   const select = h('select', { id: 'new-per-day', class: 'select' },
@@ -60,7 +62,11 @@ export function render(root, app) {
     ),
     h('p', { class: 'today-line' }, th('จุดหมาย: Santa Monica · 3,000 ไมล์')),
     h('p', { class: 'today-line', id: 'plan-line' }, th(planLine)),
-    h('a', { class: 'btn btn-primary btn-main', href: '#/drive', id: 'main-btn' }, th(mainLabel)),
+    dayDone
+      ? h('div', { class: 'day-done', id: 'day-done', lang: 'th' },
+          h('p', { class: 'day-done-title' }, 'วันนี้ขับครบแล้ว พรุ่งนี้มาขับต่อ'),
+          h('p', { class: 'muted' }, 'เรียนทีละน้อยทุกวัน จำได้นานกว่าเรียนรวดเดียว'))
+      : h('a', { class: 'btn btn-primary btn-main', href: '#/drive', id: 'main-btn' }, th(mainLabel)),
     ready < app.total
       ? h('p', { class: 'muted ready', id: 'ready' }, th('คำที่พร้อมเล่น '), en(`${ready}/${app.total}`))
       : null,

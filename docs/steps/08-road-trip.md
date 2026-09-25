@@ -26,7 +26,9 @@ reaching a stop unlocks its postcard. Keep that unlock in one small function (fo
 5. Home (DESIGN §7): guide sign `NEXT STOP` · city · miles to go (`at − miles`; after the
    last stop: "ถึงซานตาโมนิกาแล้ว!"); the gauge with today's line; the streak
    ("ขับต่อเนื่อง N วัน", best, P signs for rests); flat tires line when `countFlat > 0`
-   ("ยางแบน N คำ ทวนให้ถูกแล้วจะหายเอง"); link to the map.
+   ("ยางแบน N คำ ทวนให้ถูกแล้วจะหายเอง"); link to the map. Keep what is already there:
+   the `#day-done` note in place of the main button, and Highway Rush (Step 12, done
+   before this step) with its `done` and `arcade` ui-check scenes.
 6. When the tank first becomes full today: `fillTank`, save, toast "เติมน้ำมันเต็มถังแล้ว
    วันนี้ขับครบ" (on the results screen).
 7. Results: the odometer rolls from `startMiles` to `endMiles`; `reachedStops(route,

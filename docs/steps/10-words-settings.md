@@ -22,11 +22,13 @@ report a wrong meaning, change settings, and back up / restore progress as a fil
    numbers (answered / right / lapses), next review in Thai ("พรุ่งนี้", "อีก 5 วัน",
    "ถึงกำหนดแล้ว"), mile number if any, and **แจ้งข้อมูลผิด**: toggles
    `state.flags[id] = { day, note }` with an optional short note field. Unknown id → `#/words`.
-3. Links: words on results, postcards, the checkpoint's missed words and the wrong-answer
-   mini card open `#/word/<id>`.
+3. Links: words on results, postcards, the checkpoint's missed words, Highway Rush's
+   missed words and the wrong-answer mini card open `#/word/<id>`.
 4. `public/js/screens/settings.js` (`#/settings`):
-   - คำใหม่ต่อวัน 5/10/15/20/30 with a rough time line (about 1 minute per 1–2 words:
-     "ประมาณ 10–15 นาทีต่อวัน" for 10). Changing it updates today's plan:
+   - คำใหม่ต่อวัน 5/10/15/20/30 with a rough time line from the 2026-09-25 simulation
+     (DESIGN §1 rule 9), counting the reviews each pace brings after a month: 5 "ประมาณ
+     5–10 นาทีต่อวัน", 10 "ประมาณ 15 นาที", 15 "ประมาณ 20 นาที", 20 and 30 "ประมาณ 20
+     นาที แต่คำทวนจะค้างเกิน 100 บ่อย หลายวันจะไม่มีคำใหม่". Changing it updates today's plan:
      `newTarget = max(taught + known, value)` unless the plan was capped (more than 100
      due), and recompute `goal`.
    - ระดับเริ่มต้น A1/A2/B1/B2 with the word counts, as on home in Step 5 (sets

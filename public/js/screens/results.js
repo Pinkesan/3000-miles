@@ -1,7 +1,7 @@
 // #/results: summary of the last leg (DESIGN §7). The gauge and postcards come in Step 8.
 import { h, setChildren, th, en } from '../ui.js';
 import { odometer } from '../components/odometer.js';
-import { DAY_NEW_CAP, nextNew } from '../plan.js';
+import { newLeft } from '../plan.js';
 import { gradedToday } from '../srs.js';
 import { legSummary, tankText, levelTip } from '../summary.js';
 import * as sfx from '../sfx.js';
@@ -33,12 +33,12 @@ export function render(root, app) {
     }, 250);
   }
 
-  // What can still be driven today?
-  const newLeft = !!plan && plan.shown.length < DAY_NEW_CAP && nextNew(app.order, cards, plan, 1).length > 0;
+  // What can still be driven today? After the plan: one ขับเพิ่ม leg (DESIGN §5).
+  const wordsLeft = !!plan && newLeft(plan, cards, app.order);
   const planDone = !!plan && plan.done >= plan.goal;
   const reviewsLeft = !!plan && plan.due.some((id) => cards[id] && !gradedToday(cards[id], today));
-  const canContinue = !planDone && (reviewsLeft || (plan.taught + plan.known < plan.newTarget && newLeft));
-  const canExtra = planDone && newLeft;
+  const canContinue = !planDone && (reviewsLeft || (plan.taught + plan.known < plan.newTarget && wordsLeft));
+  const canExtra = planDone && wordsLeft;
 
   const tip = plan ? levelTip(plan, app.settings.startLevel) : null;
   const words = last.ids.map((id) => byId.get(id)).filter(Boolean);

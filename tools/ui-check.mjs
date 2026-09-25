@@ -1,7 +1,7 @@
 // UI smoke test: drives headless Chrome through the app, saves screenshots to .shots/ and
 // reports JS errors. Starts its own server (port 0), so the game server on 5320 is left alone.
 //   npm run ui
-//   ONLY=home,card npm run ui   (scenes: home card drive types resume mobile dark light)   (Git Bash)   PowerShell: $env:ONLY='home'; npm run ui
+//   ONLY=home,card npm run ui   (scenes: home card drive types resume done mobile dark light)   (Git Bash)   PowerShell: $env:ONLY='home'; npm run ui
 // Option: CHROME=path/to/chrome.exe
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -352,6 +352,28 @@ try {
     await waitFor(`!!__app.item()`);
     check(await evaluate(`JSON.parse(localStorage.getItem(${JSON.stringify(KEY)})).leg.v === 2`), 'resume: an old leg is replaced by a v2 leg');
     check(await evaluate(`__app.item().kind === 'probe'`), 'resume: the new leg starts with a probe');
+  }
+
+  if (want('done')) {
+    // plan done: one ขับเพิ่ม leg of 10 new words, then nothing is left today (DESIGN §5)
+    const dayWith = (ids) => ({
+      cards: Object.fromEntries(ids.map((id) => [id, { b: 1, d: 20501, g: 20500, n: 1, r: 1, l: 0 }])),
+      days: { 20500: { day: 20500, due: [], dueTotal: 0, newTarget: 10, goal: 10, done: 10, taught: ids.length, known: 0,
+        right: ids.length, wrong: 0, miles: 0, legs: ids.length / 10, shown: ids } },
+    });
+    await loadWith(dayWith(words.slice(0, 10).map((w) => w.id)));
+    check(await evaluate(`document.querySelector('#main-btn')?.textContent === 'ขับเพิ่ม'`), 'done: plan done, the extra leg is offered');
+    await loadWith({ ...dayWith(words.slice(0, 20).map((w) => w.id)), lastLeg: fakeLastLeg() });
+    check(await evaluate(`!document.querySelector('#main-btn') && !!document.querySelector('#day-done')`), 'done: after the extra leg, home has no main button');
+    await shot('home-done');
+    await setHash('#/results');
+    check(await evaluate(`!document.querySelector('#again-btn') && !!document.querySelector('#home-btn')`), 'done: results offer no more legs');
+    await viewport(390, 844, true);
+    await setHash('#/');
+    await shot('mobile-home-done');
+    check(!(await evaluate(`document.documentElement.scrollWidth > innerWidth`)), 'mobile home done: horizontal scroll');
+    await viewport(1366, 768);
+    await freshLoad(); // the next scenes expect a normal home
   }
 
   if (want('mobile')) {

@@ -11,7 +11,6 @@ export const CHECK_GAP = 4;
 export const CONFIRM_GAP = 6;
 export const REASK_GAP = 3;
 export const MAX_REASKS = 2;
-export const DAY_NEW_CAP = 100;
 export const EXTRA_NEW = 10;
 
 const LEVELS = ['A1', 'A2', 'B1', 'B2'];
@@ -56,6 +55,17 @@ export function nextNew(order, cards, plan, n, exclude = new Set()) {
   return out;
 }
 
+// New words a day (DESIGN §1 rule 9, §5): the plan's own, then one ขับเพิ่ม leg of
+// EXTRA_NEW. None extra on a backlog day (newTarget 0).
+export function newCap(plan) {
+  return plan.newTarget > 0 ? plan.newTarget + EXTRA_NEW : 0;
+}
+
+// Can one more new word be shown today?
+export function newLeft(plan, cards, order) {
+  return plan.shown.length < newCap(plan) && nextNew(order, cards, plan, 1).length > 0;
+}
+
 // A new word enters a leg as one probe; the types of its confirm and check are fixed here.
 export function newWordItems(id, word) {
   const type = (kind) => allowedTypes(kind, word, { canListen: false })[0];
@@ -94,7 +104,7 @@ export function buildLeg({ plan, cards, byId, order, today, rnd, caps, extra = f
   }
   const room = LEG_SIZE - reviews.length;
   const want = extra ? Math.min(room, EXTRA_NEW) : Math.min(room, plan.newTarget - plan.taught - plan.known);
-  const slots = Math.max(0, Math.min(want, DAY_NEW_CAP - plan.shown.length));
+  const slots = Math.max(0, Math.min(want, newCap(plan) - plan.shown.length));
   const ids = nextNew(order, cards, plan, slots).filter((id) => wordOf(byId, id));
   const probes = ids.flatMap((id) => newWordItems(id, wordOf(byId, id)));
   const leg = {

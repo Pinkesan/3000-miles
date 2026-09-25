@@ -399,20 +399,48 @@ test('plan: the leg picks the first new words in intro order and never repeats s
   assert.deepEqual(plan.nextNew(f.order, withCard, first.plan, 1), ['n6']);
 });
 
-test('plan: an extra leg takes 10 new words only and respects DAY_NEW_CAP', () => {
+test('plan: one extra leg a day takes 10 new words only, then no more (newCap)', () => {
   const f = reviewFixture(3, 5);
   const done = { ...f.p, taught: 5, shown: f.order.slice(0, 5) };
+  assert.equal(plan.newCap(done), 5 + plan.EXTRA_NEW);
+  assert.ok(plan.newLeft(done, f.cards, f.order));
   const { leg, plan: p2 } = plan.buildLeg({
     plan: done, cards: f.cards, byId: f.byId, order: f.order, today: TODAY, rnd: makeRng(1), caps: CAPS, extra: true,
   });
   assert.ok(leg.queue.every((x) => x.kind === 'probe'));
   assert.equal(leg.newCount, plan.EXTRA_NEW);
   assert.equal(p2.shown.length, 15);
-  const nearCap = { ...f.p, taught: 5, shown: Array.from({ length: 95 }, (_, i) => `old${i}`) };
-  const capped = plan.buildLeg({
-    plan: nearCap, cards: f.cards, byId: f.byId, order: f.order, today: TODAY, rnd: makeRng(1), caps: CAPS, extra: true,
+  // the extra leg used the day's room: a second one gets no new words
+  assert.ok(!plan.newLeft(p2, f.cards, f.order));
+  const again = plan.buildLeg({
+    plan: p2, cards: f.cards, byId: f.byId, order: f.order, today: TODAY, rnd: makeRng(1), caps: CAPS, extra: true,
   });
-  assert.equal(capped.leg.newCount, 5);
+  assert.equal(again.leg.queue.length, 0);
+  // only the room that is left
+  const part = plan.buildLeg({
+    plan: { ...done, shown: f.order.slice(0, 12) }, cards: f.cards, byId: f.byId, order: f.order, today: TODAY, rnd: makeRng(1), caps: CAPS, extra: true,
+  });
+  assert.equal(part.leg.newCount, 3);
+});
+
+test('plan: no extra new words on a backlog day', () => {
+  const f = reviewFixture(130, 5);
+  assert.equal(f.p.newTarget, 0);
+  const done = { ...f.p, done: f.p.goal };
+  assert.equal(plan.newCap(done), 0);
+  assert.ok(!plan.newLeft(done, f.cards, f.order));
+  const { leg } = plan.buildLeg({
+    plan: done, cards: f.cards, byId: f.byId, order: f.order, today: TODAY, rnd: makeRng(1), caps: CAPS, extra: true,
+  });
+  assert.equal(leg.queue.length, 0);
+});
+
+test('plan: newLeft is false when every word was already introduced', () => {
+  const f = reviewFixture(0, 5);
+  const few = f.order.slice(0, 3);
+  assert.ok(plan.newLeft({ ...f.p, shown: few.slice(0, 2) }, f.cards, few));
+  assert.ok(!plan.newLeft({ ...f.p, shown: few }, f.cards, few));
+  assert.ok(!plan.newLeft(f.p, { ...f.cards, n0: card(), n1: card(), n2: card() }, few));
 });
 
 test('plan: known words count toward newTarget and stop new words', () => {

@@ -63,6 +63,11 @@ h1, h2, p { margin: 0; }
 .brand { font: 800 22px/1 "Overpass", sans-serif; letter-spacing: .02em; }
 .today-line { font-size: 17px; }
 .ready { font-size: 15px; }
+.day-done {
+  display: flex; flex-direction: column; gap: 4px; text-align: center;
+  padding: 14px 16px; border-radius: 12px; border: 2px solid var(--line); background: var(--surface);
+}
+.day-done-title { font-weight: 600; font-size: 19px; }
 .field { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .select {
   min-height: 48px; padding: 6px 12px; border-radius: 10px; border: 2px solid var(--line);
