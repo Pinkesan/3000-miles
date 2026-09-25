@@ -1,0 +1,144 @@
+/* 3000 Miles: a night drive on an American highway (DESIGN §8). */
+
+:root {
+  --bg: #eef1ee; --surface: #ffffff; --surface-2: #f4f6f4; --line: #d5dbd6;
+  --text: #16191d; --muted: #5d646c; --sign: #0b6146; --lane: #d9a400;
+  --ok: #1f8f57; --bad: #c9353a; --accent: #cf5f25;
+  --on-lane: #16191d; --mark: #fbe7a1;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg: #15171b; --surface: #1f2329; --surface-2: #2a2f37; --line: #3a404a;
+  --text: #eceae4; --muted: #a3a7ad; --sign: #0e6b4f; --lane: #f2c230;
+  --ok: #3fb67a; --bad: #e5484d; --accent: #e8773a;
+  --on-lane: #16191d; --mark: #5a4a12;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="auto"] {
+    --bg: #15171b; --surface: #1f2329; --surface-2: #2a2f37; --line: #3a404a;
+    --text: #eceae4; --muted: #a3a7ad; --sign: #0e6b4f; --lane: #f2c230;
+    --ok: #3fb67a; --bad: #e5484d; --accent: #e8773a;
+    --on-lane: #16191d; --mark: #5a4a12;
+    color-scheme: dark;
+  }
+}
+
+[hidden] { display: none !important; }
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 400 17px/1.5 "Overpass", "Anuphan", system-ui, sans-serif;
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+}
+#app { min-height: 100vh; }
+.screen { max-width: 560px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+h1, h2, p { margin: 0; }
+.muted { color: var(--muted); }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.boot-error { padding: 24px; text-align: center; }
+
+/* buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 52px; padding: 10px 20px; border-radius: 12px; border: 2px solid transparent;
+  font-family: inherit; font-weight: 600; font-size: 18px; line-height: 1.2; text-decoration: none; cursor: pointer;
+  color: var(--text); background: transparent;
+}
+.btn-primary { background: var(--lane); color: var(--on-lane); font-weight: 800; }
+.btn-secondary { border-color: var(--line); background: var(--surface); }
+.btn-quiet { min-height: 48px; padding: 8px 12px; color: var(--muted); }
+.btn-danger { background: var(--bad); color: #fff; }
+.btn-main { width: 100%; min-height: 60px; font-size: 22px; }
+.back { align-self: flex-start; padding-left: 0; }
+.back svg { width: 20px; height: 20px; }
+.icon-btn {
+  flex: none; width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--line);
+  background: var(--surface); color: var(--text); display: grid; place-items: center; cursor: pointer;
+}
+
+/* home */
+.home-head { display: flex; justify-content: space-between; align-items: baseline; }
+.brand { font: 800 22px/1 "Overpass", sans-serif; letter-spacing: .02em; }
+.today-line { font-size: 17px; }
+.ready { font-size: 15px; }
+.field { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.select {
+  min-height: 48px; padding: 6px 12px; border-radius: 10px; border: 2px solid var(--line);
+  background: var(--surface); color: var(--text); font: inherit;
+}
+
+/* guide sign */
+.sign {
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px;
+  background: var(--sign); color: #fff; border-radius: 10px; padding: 14px 16px;
+  box-shadow: inset 0 0 0 3px var(--sign), inset 0 0 0 5px rgba(255, 255, 255, .85);
+  font-family: "Overpass", sans-serif;
+}
+.sign-small { font-weight: 600; font-size: 14px; letter-spacing: .12em; }
+.sign-big { font-weight: 800; font-size: 30px; line-height: 1.15; }
+
+/* odometer */
+.odometer { display: flex; align-items: flex-end; justify-content: center; gap: 10px; }
+.wheels { display: inline-flex; gap: 3px; padding: 6px; background: #0b0c0e; border-radius: 8px; }
+.wheel {
+  display: block; width: 44px; height: 64px; overflow: hidden; border-radius: 4px;
+  background: linear-gradient(#050506, #1a1c1f 50%, #050506);
+}
+.wheel-strip {
+  display: flex; flex-direction: column; transition: transform 900ms ease-out;
+  transform: translateY(calc(var(--d) * -64px));
+}
+.wheel-strip span {
+  flex: none; height: 64px; display: grid; place-items: center;
+  font: 600 44px/1 "Overpass Mono", monospace; color: #fff;
+}
+.odo-unit { font: 800 14px/1 "Overpass", sans-serif; letter-spacing: .12em; color: var(--muted); padding-bottom: 8px; }
+
+/* word card */
+.wordcard {
+  display: flex; flex-direction: column; gap: 10px; padding: 20px; border-radius: 14px;
+  background: var(--surface); border: 2px solid var(--line);
+}
+.wc-top { display: flex; align-items: center; gap: 14px; }
+.wc-emoji { font-size: 48px; line-height: 1; }
+.wc-word { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.wc-w { font: 800 42px/1.1 "Overpass", sans-serif; overflow-wrap: anywhere; }
+.wc-pos { color: var(--muted); font-size: 15px; }
+.wc-th { font: 600 24px/1.3 "Overpass", "Anuphan", sans-serif; }
+.wc-other { margin: 0; padding: 0; list-style: none; color: var(--muted); display: flex; flex-direction: column; gap: 2px; }
+.pos { font-style: italic; font-weight: 700; }
+.wc-ex { border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 4px; }
+.wc-ex-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.wc-ex-en { font-size: 19px; }
+.wc-ex-th { color: var(--muted); }
+mark { background: var(--mark); color: inherit; border-radius: 4px; padding: 0 3px; font-weight: 800; }
+.wc-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+
+/* toast + confirm */
+#toasts {
+  position: fixed; left: 0; right: 0; bottom: calc(16px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; z-index: 20;
+}
+.toast {
+  pointer-events: auto; max-width: min(92vw, 520px); padding: 12px 16px; border-radius: 10px;
+  background: var(--text); color: var(--bg); box-shadow: 0 4px 16px rgba(0, 0, 0, .3);
+  transition: opacity 400ms;
+}
+.toast-error { background: var(--bad); color: #fff; }
+.toast-out { opacity: 0; }
+dialog.confirm {
+  border: 2px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--text);
+  max-width: min(92vw, 420px); padding: 20px;
+}
+dialog.confirm::backdrop { background: rgba(0, 0, 0, .55); }
+dialog.confirm h2 { font-size: 20px; margin-bottom: 8px; }
+.confirm-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+
+@media (min-width: 900px) {
+  .screen { padding-top: 32px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}

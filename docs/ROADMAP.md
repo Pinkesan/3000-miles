@@ -16,7 +16,7 @@
 - [x] **Step 0.** Game design, plan, word list (3000 words, 30 batches). Done with Opus on 2026-09-25.
 - [x] **Step 1.** Content tools + pilot batch a1-01 → [steps/01-content-tools.md](steps/01-content-tools.md)
 - [x] **Step 2.** Game engine: pure modules + tests → [steps/02-engine.md](steps/02-engine.md)
-- [ ] **Step 3.** App shell: server, fonts, styles, storage, home, UI check → [steps/03-app-shell.md](steps/03-app-shell.md)
+- [x] **Step 3.** App shell: server, fonts, styles, storage, home, UI check → [steps/03-app-shell.md](steps/03-app-shell.md)
 - [ ] **Step 4.** The drive: first playable version → [steps/04-drive.md](steps/04-drive.md)
 - [ ] **C1.** Content a1-02 … a1-05 → [CONTENT-GUIDE.md](CONTENT-GUIDE.md)
 - [ ] **C2.** Content a1-06 … a1-09
@@ -69,6 +69,7 @@ Token economy:
 
 ## Log
 
+- 2026-09-25: Step 3. `tools/{serve,get-fonts}.mjs`, `start.bat`, fonts (latin+thai, OFL) in `public/fonts`, `public/{index.html,css/app.css}`, `js/{ui,icons,speech,sfx,store,main}.js`, `screens/{home,card,placeholder}.js`, `components/{wordcard,odometer}.js`, `tools/ui-check.mjs` (scenes home card mobile dark light; `JS errors: none`), `test/store.test.mjs` (77 tests pass). Deviations: `app.say(text, {rate})`/`app.stopSay`/`app.hasVoice()`/`app.ensurePlan()` added to `app`; changing newPerDay on home also updates today's plan while it has no progress; `img/favicon.svg` added (avoids a 404); extra `light` UI scene.
 - 2026-09-25: Step 2. `public/js/{rng,day,srs,text,quiz,plan,progress}.js` + `test/engine.test.mjs` (67 tests pass, no DOM/storage/Date.now in the modules). API as in the step file, plus: `extraNewWord({plan,cards,byId,order,leg,rnd})` (adds the extra new word after a right "I know this", updates `shown`/`newCount`); `recordAnswer` only updates cards/plan/leg.stats, so call `legReduce` with the same answer afterwards; `introOrder` sorts by hash(seed:id) so the order stays stable as content grows; `byId` may be an object or a Map; `progress` route args accept an array or `{stops}`; gapOnly new-word check and "know" are `gap`; letterHint hides digits too.
 - 2026-09-25: Step 1. `tools/lib/{words,forms,check}.mjs`, `tools/check-content.mjs`,
   `tools/build-data.mjs`; pilot `content/a1-01.json` (100 words, 0 errors, 0 warnings);
