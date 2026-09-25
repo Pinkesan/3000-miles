@@ -14,7 +14,7 @@
 ## Status
 
 - [x] **Step 0.** Game design, plan, word list (3000 words, 30 batches). Done with Opus on 2026-09-25.
-- [ ] **Step 1.** Content tools + pilot batch a1-01 → [steps/01-content-tools.md](steps/01-content-tools.md)
+- [x] **Step 1.** Content tools + pilot batch a1-01 → [steps/01-content-tools.md](steps/01-content-tools.md)
 - [ ] **Step 2.** Game engine: pure modules + tests → [steps/02-engine.md](steps/02-engine.md)
 - [ ] **Step 3.** App shell: server, fonts, styles, storage, home, UI check → [steps/03-app-shell.md](steps/03-app-shell.md)
 - [ ] **Step 4.** The drive: first playable version → [steps/04-drive.md](steps/04-drive.md)
@@ -69,6 +69,10 @@ Token economy:
 
 ## Log
 
+- 2026-09-25: Step 1. `tools/lib/{words,forms,check}.mjs`, `tools/check-content.mjs`,
+  `tools/build-data.mjs`; pilot `content/a1-01.json` (100 words, 0 errors, 0 warnings);
+  `public/data/words.json` built (100 words). 13 tests pass. No deviations. Waiting for the
+  user to skim a1-01 for style before C1.
 - 2026-09-25: Step 0 (Opus). Design in `docs/DESIGN.md`, content rules in
   `docs/CONTENT-GUIDE.md`, step files 1–11. `data/oxford3000.json` built by
   `tools/build-wordlist.mjs` from OUP's free American Oxford 3000 PDFs: 3000 words (A1 900,
