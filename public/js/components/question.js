@@ -27,7 +27,7 @@ export function miniCard(app, word) {
   );
 }
 
-// opts: { tag, kind ('probe' shows no mini card), canSkip, speedBar (drive only), onAnswer, onSkip, onNext, cheer }
+// opts: { tag, kind ('probe' shows no mini card; 'rush' no mini card and no button), canSkip, speedBar (drive only), onAnswer, onSkip, onNext, cheer }
 export function questionView(app, q, { tag, kind, canSkip = false, speedBar = false, onAnswer, onSkip, onNext, cheer = 0 }) {
   const { word } = q;
   const typed = !q.options;
@@ -137,10 +137,11 @@ export function questionView(app, q, { tag, kind, canSkip = false, speedBar = fa
         : h('p', { class: 'fb-msg fb-wrong' }, h('span', { html: icons.x }), th('ยังไม่ใช่ คำตอบคือ '), h('b', { lang: answerLang }, answerText)),
     ];
     const probe = kind === 'probe';
-    if (!correct && !probe) parts.push(miniCard(app, word));
+    const rush = kind === 'rush'; // Highway Rush: the screen moves on by itself, no mini card, no button
+    if (!correct && !probe && !rush) parts.push(miniCard(app, word));
     else if (isGap(q)) parts.push(h('p', { class: 'fb-sentence' }, exampleLine(word.ex)));
     else if (q.type === 'listen' || q.type === 'dictation') parts.push(en(word.w, { class: 'fb-word' }));
-    if (!advancesAlone(q, correct)) {
+    if (!rush && !advancesAlone(q, correct)) {
       parts.push(h('button', { class: 'btn btn-primary btn-next', type: 'button', onclick: () => onNext?.() }, th(!correct && probe ? 'เรียนคำนี้' : 'ต่อไป')));
     }
     setChildren(fb, parts);

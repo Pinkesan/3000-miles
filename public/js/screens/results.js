@@ -3,6 +3,7 @@ import { h, setChildren, th, en } from '../ui.js';
 import { icons } from '../icons.js';
 import { odometer } from '../components/odometer.js';
 import { newLeft } from '../plan.js';
+import { arcadeOpen } from '../arcade.js';
 import { gradedToday } from '../srs.js';
 import { legSummary, tankText, levelTip } from '../summary.js';
 import * as sfx from '../sfx.js';
@@ -41,6 +42,7 @@ export function render(root, app) {
   const canContinue = !planDone && (reviewsLeft || (plan.taught + plan.known < plan.newTarget && wordsLeft));
   const canExtra = planDone && wordsLeft;
 
+  const canRush = !canContinue && !canExtra && arcadeOpen(cards, plan);
   const tip = plan ? levelTip(plan, app.settings.startLevel) : null;
   const words = last.ids.map((id) => byId.get(id)).filter(Boolean);
   setChildren(
@@ -76,7 +78,8 @@ export function render(root, app) {
     h('div', { class: 'results-actions' },
       canContinue ? h('a', { class: 'btn btn-primary btn-main', href: '#/drive', id: 'again-btn' }, th('ขับต่อ')) : null,
       canExtra ? h('a', { class: 'btn btn-primary btn-main', href: '#/drive', id: 'again-btn' }, th('ขับเพิ่ม')) : null,
-      h('a', { class: `btn ${canContinue || canExtra ? 'btn-secondary' : 'btn-primary btn-main'}`, href: '#/', id: 'home-btn' }, th('กลับหน้าแรก')),
+      canRush ? h('a', { class: 'btn btn-primary btn-main', href: '#/arcade', id: 'rush-btn', lang: 'en' }, 'Highway Rush') : null,
+      h('a', { class: `btn ${canContinue || canExtra || canRush ? 'btn-secondary' : 'btn-primary btn-main'}`, href: '#/', id: 'home-btn' }, th('กลับหน้าแรก')),
     ),
     words.length
       ? h('section', { class: 'leg-words' },

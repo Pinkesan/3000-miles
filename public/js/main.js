@@ -10,6 +10,7 @@ import * as home from './screens/home.js';
 import * as drive from './screens/drive.js';
 import * as results from './screens/results.js';
 import * as card from './screens/card.js';
+import * as arcade from './screens/arcade.js';
 
 const query = new URLSearchParams(location.search);
 export const testMode = query.has('test');
@@ -21,6 +22,7 @@ const ROUTES = {
   drive: { screen: drive, title: 'ขับ' },
   results: { screen: results, title: 'สรุปช่วง' },
   card: { screen: card, title: 'การ์ดคำศัพท์' },
+  arcade: { screen: arcade, title: 'Highway Rush' },
 };
 
 function applyTheme(theme) {
@@ -103,8 +105,8 @@ async function boot() {
   route();
 
   if (testMode) {
-    // The drive screen sets app.hooks; the UI check reads the current item and question.
-    window.__app = { app, question: () => app.hooks?.question() ?? null, item: () => app.hooks?.item() ?? null };
+    // The drive and arcade screens set app.hooks; the UI check reads the current item and question.
+    window.__app = { app, question: () => app.hooks?.question() ?? null, item: () => app.hooks?.item() ?? null, endRun: () => app.hooks?.endRun?.() };
   }
 }
 

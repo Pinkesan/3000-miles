@@ -1,7 +1,7 @@
 // UI smoke test: drives headless Chrome through the app, saves screenshots to .shots/ and
 // reports JS errors. Starts its own server (port 0), so the game server on 5320 is left alone.
 //   npm run ui
-//   ONLY=home,card npm run ui   (scenes: home card drive types synonym score resume done mobile dark light)   (Git Bash)   PowerShell: $env:ONLY='home'; npm run ui
+//   ONLY=home,card npm run ui   (scenes: home card drive types synonym score arcade resume done mobile dark light)   (Git Bash)   PowerShell: $env:ONLY='home'; npm run ui
 // Option: CHROME=path/to/chrome.exe
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -164,6 +164,29 @@ function reviewCards() {
   });
   return cards;
 }
+
+// 60 cards met on earlier days (not due) and a finished plan for today: Highway Rush is open.
+const rushState = (planDone = true) => ({
+  cards: Object.fromEntries(words.slice(0, 60).map((w, i) => [w.id, { b: 1 + (i % 4), d: 20501 + i, g: 20499, n: 2, r: 2, l: 0 }])),
+  days: { 20500: { day: 20500, due: [], dueTotal: 0, newTarget: 10, goal: 10, done: planDone ? 10 : 4, taught: 10, known: 0,
+    right: 10, wrong: 0, miles: 0, legs: 1, shown: [] } },
+});
+const pressEnter = () => evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }))`);
+// opens a run: skips the countdown with Enter
+const startRush = async () => {
+  await setHash('#/arcade');
+  await waitFor(`!!document.querySelector('#countdown')`);
+  await pressEnter();
+  await waitFor(`!!__app.question()`);
+};
+// answers one Highway Rush question (right or wrong) and waits for the next one
+const rushAnswer = async (right, { last = false } = {}) => {
+  await waitFor(`!!__app.question() && !document.querySelector('.opt:disabled')`);
+  const q = JSON.parse(await evaluate(`JSON.stringify(__app.question())`));
+  const id = right ? q.id : q.options.find((o) => o.id !== q.id).id;
+  await evaluate(`document.querySelector('.opt[data-id=${JSON.stringify(id)}]').click()`);
+  if (!last) await waitFor(`__app.question()?.id !== ${JSON.stringify(q.id)}`);
+};
 
 const fakeLastLeg = () => ({
   day: 20500, stats: { right: 8, wrong: 2, taught: 4, known: 1, reviewed: 5, miles: 2 }, startMiles: 10, endMiles: 12,
@@ -411,6 +434,56 @@ try {
     await viewport(1366, 768);
   }
 
+  if (want('arcade')) {
+    const savedCards = () => evaluate(`JSON.stringify(JSON.parse(localStorage.getItem(${JSON.stringify(KEY)})).cards)`);
+    const savedRuns = () => evaluate(`JSON.parse(localStorage.getItem(${JSON.stringify(KEY)})).arcade.runs.length`);
+    await loadWith(rushState(false));
+    check(await evaluate(`!!document.querySelector('#rush-locked') && !document.querySelector('#rush-link, #rush-btn')`), 'arcade: home says it opens after the day plan');
+    await setHash('#/arcade');
+    check(await evaluate(`location.hash === '#/'`), 'arcade: closed before the plan is done, goes home');
+
+    await loadWith(rushState());
+    check(await evaluate(`!!document.querySelector('#rush-link, #rush-btn')`), 'arcade: home links to Highway Rush when open');
+    const cardsBefore = await savedCards();
+    await setHash('#/arcade');
+    await waitFor(`!!document.querySelector('#countdown')`);
+    await shot('arcade-countdown');
+    await pressEnter();
+    await waitFor(`!!__app.question()`);
+    for (let i = 0; i < 10; i++) await rushAnswer(i !== 3 && i !== 7);
+    check(await evaluate(`document.querySelectorAll('.cone-down').length === 2`), 'arcade: two wrong answers, two cones down');
+    check(await evaluate(`!document.querySelector('.btn-next') && !document.querySelector('.minicard')`), 'arcade: no next button or mini card');
+    check(await evaluate(`Number(document.querySelector('.rush-speed').textContent) > 40`), 'arcade: speed goes up');
+    await shot('arcade-run');
+    await evaluate(`__app.endRun()`);
+    await waitFor(`!!document.querySelector('#rush-score')`);
+    check(await evaluate(`Number(document.querySelector('#rush-score').textContent.replace(/,/g, '')) > 0`), 'arcade: the run has a score');
+    check(await evaluate(`document.querySelectorAll('#rush-missed li').length === 2`), 'arcade: two missed words are listed');
+    check((await savedRuns()) === 1, 'arcade: the run is saved');
+    check((await savedCards()) === cardsBefore, 'arcade: cards are untouched after a run');
+    await shot('arcade-end');
+    // a second run: three wrong answers end it by themselves
+    await evaluate(`document.querySelector('#again-btn').click()`);
+    await waitFor(`!!document.querySelector('#countdown')`);
+    await pressEnter();
+    await waitFor(`!!__app.question()`);
+    await rushAnswer(true);
+    await rushAnswer(false);
+    await rushAnswer(false);
+    await rushAnswer(false, { last: true });
+    await waitFor(`!!document.querySelector('#rush-score')`);
+    check((await savedRuns()) === 2, 'arcade: the third strike ends the run');
+    check((await savedCards()) === cardsBefore, 'arcade: cards are untouched after two runs');
+    await viewport(360, 740, true);
+    check(!(await evaluate(`document.documentElement.scrollWidth > innerWidth`)), 'arcade: horizontal scroll on the end screen at 360px');
+    await evaluate(`document.querySelector('#again-btn').click()`);
+    await waitFor(`!!document.querySelector('#countdown')`);
+    await pressEnter();
+    await waitFor(`!!__app.question()`);
+    check(!(await evaluate(`document.documentElement.scrollWidth > innerWidth`)), 'arcade: horizontal scroll in a run at 360px');
+    await viewport(1366, 768);
+  }
+
   if (want('resume')) {
     await freshLoad();
     await setHash('#/drive');
@@ -450,11 +523,16 @@ try {
     });
     await loadWith(dayWith(words.slice(0, 10).map((w) => w.id)));
     check(await evaluate(`document.querySelector('#main-btn')?.textContent === 'ขับเพิ่ม'`), 'done: plan done, the extra leg is offered');
-    await loadWith({ ...dayWith(words.slice(0, 20).map((w) => w.id)), lastLeg: fakeLastLeg() });
+    const full = dayWith(words.slice(0, 20).map((w) => w.id));
+    // 25 more words met on earlier days: 45 cards, so Highway Rush is unlocked
+    for (const w of words.slice(20, 45)) full.cards[w.id] = { b: 1, d: 20510, g: 20499, n: 1, r: 1, l: 0 };
+    await loadWith({ ...full, lastLeg: fakeLastLeg() });
     check(await evaluate(`!document.querySelector('#main-btn') && !!document.querySelector('#day-done')`), 'done: after the extra leg, home has no main button');
+    check(await evaluate(`document.querySelector('#rush-btn')?.classList.contains('btn-primary')`), 'done: home offers Highway Rush as the primary button');
     await shot('home-done');
     await setHash('#/results');
     check(await evaluate(`!document.querySelector('#again-btn') && !!document.querySelector('#home-btn')`), 'done: results offer no more legs');
+    check(await evaluate(`document.querySelector('#rush-btn')?.classList.contains('btn-primary') && document.querySelector('#home-btn').classList.contains('btn-secondary')`), 'done: results offer Highway Rush as the primary button');
     await viewport(390, 844, true);
     await setHash('#/');
     await shot('mobile-home-done');
@@ -478,6 +556,10 @@ try {
     await sleep(1200);
     await shot('mobile-results');
     check(!(await evaluate(`document.documentElement.scrollWidth > innerWidth`)), 'mobile results: horizontal scroll');
+    await loadWith(rushState());
+    await startRush();
+    await rushAnswer(true);
+    await shot('mobile-arcade');
     await viewport(360, 740, true);
     check(!(await evaluate(`document.documentElement.scrollWidth > innerWidth`)), 'mobile 360px: horizontal scroll');
     await viewport(1366, 768);
@@ -497,6 +579,10 @@ try {
     await setHash('#/results');
     await sleep(1200);
     await shot('dark-results');
+    await loadWith(rushState());
+    await startRush();
+    await rushAnswer(true);
+    await shot('dark-arcade');
     await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] });
     await viewport(1366, 768);
   }

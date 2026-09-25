@@ -14,5 +14,6 @@ export const icons = {
   fuel: svg('<path d="M5 20V5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v15M4 20h11M14 9h2.5a1.5 1.5 0 0 1 1.5 1.5V16a1.5 1.5 0 0 0 3 0V9l-3-3"/><path d="M7 8h5"/>'),
   star: svg('<path d="M12 3l2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 16.9 6.6 19.8l1.1-6.1L3.2 9.4l6.1-.8L12 3z" fill="currentColor"/>'),
   starEmpty: svg('<path d="M12 3l2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 16.9 6.6 19.8l1.1-6.1L3.2 9.4l6.1-.8L12 3z"/>'),
+  cone: svg('<path d="M12 3l5 15H7L12 3z" fill="currentColor"/><path d="M4 21h16" /><path d="M9.5 11h5" stroke="#fff"/>'),
   flag: svg('<path d="M5 21V4M5 4h12l-2 4 2 4H5"/>'),
 };
