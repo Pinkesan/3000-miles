@@ -14,6 +14,7 @@ import * as card from './screens/card.js';
 import * as arcade from './screens/arcade.js';
 import * as map from './screens/map.js';
 import * as postcard from './screens/postcard.js';
+import * as checkpoint from './screens/checkpoint.js';
 
 const query = new URLSearchParams(location.search);
 export const testMode = query.has('test');
@@ -28,6 +29,7 @@ const ROUTES = {
   arcade: { screen: arcade, title: 'Highway Rush' },
   map: { screen: map, title: 'แผนที่' },
   postcard: { screen: postcard, title: 'โปสการ์ด' },
+  checkpoint: { screen: checkpoint, title: 'ด่านตรวจ' },
 };
 
 function applyTheme(theme) {
@@ -123,7 +125,7 @@ async function boot() {
   route();
 
   if (testMode) {
-    // The drive and arcade screens set app.hooks; the UI check reads the current item and question.
+    // The drive, arcade and checkpoint screens set app.hooks; the UI check reads the current item and question.
     window.__app = { app, question: () => app.hooks?.question() ?? null, item: () => app.hooks?.item() ?? null, endRun: () => app.hooks?.endRun?.() };
   }
 }

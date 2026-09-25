@@ -1,6 +1,7 @@
-// #/results: summary of the last leg (DESIGN §7). The checkpoint button comes in Step 9.
+// #/results: summary of the last leg (DESIGN §7).
 import { h, setChildren, th, en, toast } from '../ui.js';
-import { fillTank, newlyReached, reachedStops } from '../progress.js';
+import { fillTank } from '../progress.js';
+import { openCheckpoint } from '../checkpoint.js';
 import { icons } from '../icons.js';
 import { odometer } from '../components/odometer.js';
 import { newLeft } from '../plan.js';
@@ -9,27 +10,11 @@ import { gradedToday } from '../srs.js';
 import { legSummary, tankText, tankFill, levelTip } from '../summary.js';
 import * as sfx from '../sfx.js';
 
-// Reaching a stop unlocks its postcard. Step 9 puts a checkpoint exam here instead: change only this.
-// Returns the stops to show as new: those crossed by this leg (start, end] plus any older ones
-// that were never unlocked (saves from before Step 8).
-function unlockReached(app, endMiles, startMiles) {
-  const { store, route } = app;
-  const today = app.today();
-  const fresh = newlyReached(route, endMiles, store.state.stops);
-  const shown = new Set(reachedStops(route, startMiles, endMiles).map((s) => s.id));
-  if (fresh.length) {
-    store.update((s) => { for (const st of fresh) s.stops[st.id] = today; });
-    sfx.stop();
-    fresh.forEach((s) => shown.add(s.id));
-  }
-  return route.stops.filter((s) => shown.has(s.id));
-}
-
 const stat = (value, label) =>
   h('div', { class: 'stat' }, en(String(value), { class: 'stat-n' }), th(label, { class: 'stat-l' }));
 
 export function render(root, app) {
-  const { store, byId } = app;
+  const { store, byId, route } = app;
   const last = store.state.lastLeg;
   if (!last) {
     location.replace('#/');
@@ -55,7 +40,8 @@ export function render(root, app) {
     store.update((s) => { s.streak = fillTank(s.streak, today); });
     toast('เติมน้ำมันเต็มถังแล้ว วันนี้ขับครบ', 'ok');
   }
-  const stops = unlockReached(app, sum.endMiles, sum.startMiles);
+  // reaching a stop opens its checkpoint exam; the postcard comes with passing it (DESIGN §6)
+  const gate = openCheckpoint(route, sum.endMiles, store.state.checkpoints, store.state.stops);
 
   // What can still be driven today? After the plan: one ขับเพิ่ม leg (DESIGN §5).
   const wordsLeft = !!plan && newLeft(plan, cards, app.order);
@@ -85,10 +71,11 @@ export function render(root, app) {
     sum.gained > 0
       ? h('p', { class: 'gain', id: 'gain' }, en(`+${sum.gained}`), th(' ไมล์'))
       : h('p', { class: 'gain gain-none', id: 'gain' }, th('ช่วงนี้ยังไม่ได้ไมล์เพิ่ม ไมล์ได้เมื่อจำคำนั้นได้ในสามวันต่างกัน')),
-    stops.map((s) =>
-      h('a', { class: 'stop-reached', href: `#/postcard/${s.id}`, id: `stop-${s.id}` },
-        h('span', { class: 'stop-reached-t' }, th('ถึง '), en(s.city), th(' แล้ว! ได้โปสการ์ดใบใหม่')),
-        h('span', { class: 'btn btn-primary' }, th('ดูโปสการ์ด')))),
+    gate
+      ? h('a', { class: 'stop-reached', href: `#/checkpoint/${gate.id}`, id: 'gate-link' },
+          h('span', { class: 'stop-reached-t' }, th('ถึงด่านตรวจ '), en(gate.city), th(' แล้ว')),
+          h('span', { class: 'btn btn-primary' }, th('เข้าด่าน')))
+      : null,
     h('div', { class: 'stats' },
       stat(sum.pct == null ? '-' : `${sum.pct}%`, 'ตอบถูก'),
       stat(sum.taught, 'สอนคำใหม่'),

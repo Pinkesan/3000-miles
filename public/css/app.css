@@ -82,6 +82,17 @@ h1, h2, p { margin: 0; }
   font-family: "Overpass", sans-serif;
 }
 .sign-small { font-weight: 600; font-size: 14px; letter-spacing: .12em; }
+/* checkpoint: a road barrier across the top of the guide sign (DESIGN §8) */
+.sign-checkpoint { position: relative; padding-top: 30px; }
+.sign-checkpoint::before {
+  content: ""; position: absolute; left: 10px; right: 10px; top: 10px; height: 10px; border-radius: 3px;
+  background: repeating-linear-gradient(-45deg, var(--bad) 0 10px, #fff 10px 20px);
+}
+.center { text-align: center; }
+.best-stars { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.exam-fail { text-align: center; color: var(--bad); font-weight: 600; }
+.stars.stars-sm svg { width: 16px; height: 16px; }
+.stars.stars-sm { gap: 2px; }
 .sign-big { font-weight: 800; font-size: 30px; line-height: 1.15; }
 
 /* odometer */
@@ -358,3 +369,6 @@ dialog.confirm h2 { font-size: 20px; margin-bottom: 8px; }
 .pc-words { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
 .pc-words li { display: flex; flex-direction: column; min-width: 0; padding: 4px 0; border-bottom: 1px solid var(--line); }
 @media (max-width: 420px) { .pc-words { grid-template-columns: 1fr; } }
+.sign-checkpoint.map-gate { padding-top: 26px; text-decoration: none; }
+.map-gate::before { top: 8px; height: 8px; }
+.sign-small:lang(th) { letter-spacing: 0; }

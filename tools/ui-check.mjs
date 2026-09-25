@@ -1,7 +1,7 @@
 // UI smoke test: drives headless Chrome through the app, saves screenshots to .shots/ and
 // reports JS errors. Starts its own server (port 0), so the game server on 5320 is left alone.
 //   npm run ui
-//   ONLY=home,card npm run ui   (scenes: home card drive types synonym score arcade map postcard arrive streak resume done mobile dark light)   (Git Bash)   PowerShell: $env:ONLY='home'; npm run ui
+//   ONLY=home,card npm run ui   (scenes: home card drive types synonym score arcade map postcard arrive checkpoint streak resume done mobile dark light)   (Git Bash)   PowerShell: $env:ONLY='home'; npm run ui
 // Option: CHROME=path/to/chrome.exe
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -202,6 +202,31 @@ const tripState = () => ({
   stops: Object.fromEntries(route.stops.filter((s) => s.at > 0 && s.at <= TRIP).map((s) => [s.id, 20495])),
 });
 const noScroll = () => evaluate(`document.documentElement.scrollWidth <= innerWidth`);
+
+// 100 mile cards (miles 1..100, none due): the Philadelphia checkpoint (mile 90) is open, Washington (215) is not
+const examState = () => ({
+  cards: Object.fromEntries(words.slice(0, 100).map((w, i) =>
+    [w.id, { b: 3, d: 20600 + i, g: 20495, n: 3, r: 3, l: 0, m: i + 1, md: 20495 }])),
+});
+const savedState = async () => JSON.parse(await evaluate(`localStorage.getItem(${JSON.stringify(KEY)})`));
+// opens the checkpoint screen and starts the exam
+const startExam = async (id = 'philadelphia') => {
+  await setHash(`#/checkpoint/${id}`);
+  await waitFor(`!!document.querySelector('#exam-start')`);
+  await evaluate(`document.querySelector('#exam-start').click()`);
+  await waitFor(`!!__app.question()`);
+};
+// types a right (or wrong) answer, moves on with "ต่อไป"; returns the word id
+const examAnswerOne = async (right) => {
+  await waitFor(`!!__app.question() && !document.querySelector('.answer-input:disabled')`);
+  const q = JSON.parse(await evaluate(`JSON.stringify(__app.question())`));
+  const text = right ? q.accept[0] : 'zzzzq';
+  await evaluate(`(() => { const i = document.querySelector('.answer-input'); i.value = ${JSON.stringify(text)}; document.querySelector('.answer-form').requestSubmit(); })()`);
+  await waitFor(`!!document.querySelector('.btn-next')`);
+  await evaluate(`document.querySelector('.btn-next').click()`);
+  await waitFor(`!!document.querySelector('#exam-score') || __app.question()?.id !== ${JSON.stringify(q.id)}`);
+  return q.id;
+};
 
 const fakeLastLeg = () => ({
   day: 20500, stats: { right: 8, wrong: 2, taught: 4, known: 1, reviewed: 5, miles: 2 }, startMiles: 10, endMiles: 12,
@@ -537,18 +562,83 @@ try {
     await loadWith({ cards: { ...milesCards(89), [due.id]: { b: 2, d: 20500, g: 20490, n: 3, r: 3, l: 0 } }, days: onePlan(due.id) });
     await setHash('#/drive');
     await playLeg();
-    await waitFor(`!!document.querySelector('#stop-philadelphia')`);
-    check(await evaluate(`document.querySelector('#stop-philadelphia').textContent.includes('Philadelphia')`), 'arrive: results show the Philadelphia postcard button');
-    check(await evaluate(`JSON.parse(localStorage.getItem(${JSON.stringify(KEY)})).stops.philadelphia === 20500`), 'arrive: the postcard is unlocked and saved');
+    await waitFor(`!!document.querySelector('#gate-link')`);
+    check(await evaluate(`document.querySelector('#gate-link').textContent.includes('ถึงด่านตรวจ') && document.querySelector('#gate-link').textContent.includes('Philadelphia') && document.querySelector('#gate-link').textContent.includes('เข้าด่าน')`), 'arrive: results show the Philadelphia checkpoint and เข้าด่าน');
+    check(await evaluate(`JSON.parse(localStorage.getItem(${JSON.stringify(KEY)})).stops.philadelphia == null`), 'arrive: reaching a stop does not unlock the postcard');
     await sleep(1400);
     check(await evaluate(`document.querySelector('.odometer').getAttribute('aria-label') === '90 ไมล์' && document.querySelectorAll('.wheel')[3].style.getPropertyValue('--d') === '0'`), 'arrive: the odometer rolled to 90');
     await shot('arrive');
     await evaluate(`location.reload()`).catch(() => {});
     await sleep(300);
     await waitFor(pageReady);
-    check(await evaluate(`!!document.querySelector('#stop-philadelphia')`), 'arrive: the postcard button is still there after a reload');
-    await evaluate(`document.querySelector('#stop-philadelphia').click()`);
-    await waitFor(`location.hash === '#/postcard/philadelphia'`);
+    check(await evaluate(`!!document.querySelector('#gate-link')`), 'arrive: the checkpoint link is still there after a reload');
+    await evaluate(`document.querySelector('#gate-link').click()`);
+    await waitFor(`location.hash === '#/checkpoint/philadelphia'`);
+  }
+
+  if (want('checkpoint')) {
+    await loadWith(examState());
+    check(await evaluate(`document.querySelector('#next-stop').textContent.includes('CHECKPOINT') && document.querySelector('#next-stop').textContent.includes('Philadelphia') && !!document.querySelector('#gate-btn')`), 'checkpoint: home shows the Philadelphia checkpoint and เข้าด่าน');
+    await shot('home-gate');
+    await setHash('#/checkpoint/washington');
+    check(await evaluate(`location.hash === '#/'`), 'checkpoint: a stop that is not open goes home');
+    await evaluate(`document.querySelector('#gate-btn').click()`);
+    await waitFor(`location.hash === '#/checkpoint/philadelphia' && !!document.querySelector('#exam-start')`);
+    check(await evaluate(`document.querySelector('#exam-info').textContent.includes('15 คำ') && document.querySelector('#exam-info').textContent.includes('12 คำขึ้นไป')`), 'checkpoint: intro says 15 words, pass 12');
+    await shot('checkpoint-intro');
+    await evaluate(`document.querySelector('#exam-start').click()`);
+    await waitFor(`!!__app.question()`);
+    check(await evaluate(`document.querySelector('.stage-tag').textContent === 'ด่านตรวจ 1 / 15' && !document.querySelector('.speed-bar') && !document.querySelector('.btn-skip')`), 'checkpoint: stage tag "ด่านตรวจ 1 / 15", no speed bar, no skip');
+    check(await evaluate(`['spell', 'gapType', 'dictation'].includes(__app.question().type) && __app.item().kind === 'exam'`), 'checkpoint: exam question types');
+    await shot('checkpoint-question');
+    // 13 right, the 5th and 9th wrong; reload in the middle once
+    const missedIds = [];
+    for (let n = 0; n < 15; n++) {
+      if (n === 6) {
+        const key = await evaluate(`__app.item().key`);
+        await evaluate(`location.reload()`).catch(() => {});
+        await sleep(300);
+        await waitFor(`!!document.querySelector('.screen') && !!__app.item()`);
+        check((await evaluate(`__app.item().key`)) === key, 'checkpoint: a reload continues at the same question');
+        check(await evaluate(`document.querySelector('.stage-tag').textContent === 'ด่านตรวจ 7 / 15'`), 'checkpoint: the count survives a reload');
+      }
+      const wrong = n === 4 || n === 8;
+      const id = await examAnswerOne(!wrong);
+      if (wrong) missedIds.push(id);
+    }
+    await waitFor(`!!document.querySelector('#exam-score')`);
+    check(await evaluate(`document.querySelector('#exam-score').textContent === '13 / 15' && !!document.querySelector('#exam-stars') && !!document.querySelector('#exam-pass') && !!document.querySelector('#get-postcard')`), 'checkpoint: 13 / 15 passes with a star and a postcard');
+    check(await evaluate(`document.querySelectorAll('#exam-missed li').length === 2`), 'checkpoint: the 2 missed words are listed');
+    let st = await savedState();
+    check(st.stops.philadelphia === 20500 && st.checkpoints.philadelphia.passed === 20500 && st.checkpoints.philadelphia.best === 1 && st.checkpoints.philadelphia.tries === 1 && st.exam == null, `checkpoint: passed and saved (${JSON.stringify(st.checkpoints)})`);
+    check(missedIds.length === 2 && missedIds.every((id) => st.cards[id].f === 1) && Object.values(st.cards).filter((c) => c.f).length === 2, 'checkpoint: the 2 missed words are flat tires, nothing else changed');
+    check(Object.values(st.cards).filter((c) => c.g === 20500).length === 2, 'checkpoint: right answers changed no card');
+    await shot('checkpoint-pass');
+    await evaluate(`document.querySelector('#get-postcard').click()`);
+    await waitFor(`location.hash === '#/postcard/philadelphia' && !!document.querySelector('#postcard-front')`);
+    await setHash('#/');
+    check(await evaluate(`!document.querySelector('#gate-btn') && !document.querySelector('#next-stop').textContent.includes('CHECKPOINT')`), 'checkpoint: after the pass home has no checkpoint (Washington opens at 215)');
+    // a passed checkpoint can be tried again the next day, not today
+    await setHash('#/checkpoint/philadelphia');
+    check(await evaluate(`document.querySelector('#exam-start').disabled && !!document.querySelector('#best-stars') && !!document.querySelector('#exam-tomorrow')`), 'checkpoint: a second try today is disabled');
+
+    // a fresh run of the same seed with 11 right: failed, the car waits
+    await loadWith(examState());
+    await startExam();
+    for (let n = 0; n < 15; n++) await examAnswerOne(n >= 4);
+    await waitFor(`!!document.querySelector('#exam-score')`);
+    check(await evaluate(`document.querySelector('#exam-score').textContent === '11 / 15' && !!document.querySelector('#exam-fail') && !document.querySelector('#get-postcard') && !document.querySelector('#exam-stars')`), 'checkpoint: 11 / 15 fails, no postcard');
+    check(await evaluate(`document.querySelector('#exam-fail').textContent.includes('ต้องได้ 12 จาก 15')`), 'checkpoint: the fail line names the pass mark');
+    st = await savedState();
+    check(st.stops.philadelphia == null && st.checkpoints.philadelphia.passed == null && st.checkpoints.philadelphia.tries === 1, 'checkpoint: a failed try is saved without a pass');
+    await shot('checkpoint-fail');
+    await setHash('#/');
+    check(await evaluate(`!!document.querySelector('#gate-tomorrow') && !document.querySelector('#gate-btn') && document.querySelector('#next-stop').textContent.includes('CHECKPOINT')`), 'checkpoint: after a try home says ลองใหม่พรุ่งนี้');
+    await setHash('#/map');
+    await sleep(1200);
+    check(await evaluate(`!!document.querySelector('#map-gate') && Math.abs(Number(document.querySelector('#map-car').style.getPropertyValue('--f')) - 1 / 15) < 1e-6 && document.querySelector('#map-car').getAttribute('aria-label') === '100 ไมล์'`), 'checkpoint: the map has a barrier and the car waits at the city limits (mile 90)');
+    check(await noScroll(), 'checkpoint: map horizontal scroll');
+    await shot('map-gate');
   }
 
   if (want('streak')) {
@@ -652,6 +742,14 @@ try {
       await shot(`mobile-${name}`);
       check(await noScroll(), `mobile ${name}: horizontal scroll`);
     }
+    await loadWith(examState());
+    await setHash('#/checkpoint/philadelphia');
+    await waitFor(`!!document.querySelector('#exam-start')`);
+    await shot('mobile-checkpoint-intro');
+    await evaluate(`document.querySelector('#exam-start').click()`);
+    await waitFor(`!!__app.question()`);
+    await shot('mobile-checkpoint-question');
+    check(await noScroll(), 'mobile-checkpoint: horizontal scroll');
     await viewport(360, 740, true);
     for (const hash of ['#/', '#/map', '#/postcard/cleveland']) {
       await setHash(hash);
@@ -685,6 +783,14 @@ try {
       await sleep(900);
       await shot(`dark-${name}`);
     }
+    await loadWith(examState());
+    await setHash('#/checkpoint/philadelphia');
+    await waitFor(`!!document.querySelector('#exam-start')`);
+    await shot('dark-checkpoint-intro');
+    await evaluate(`document.querySelector('#exam-start').click()`);
+    await waitFor(`!!__app.question()`);
+    await shot('dark-checkpoint-question');
+    check(await noScroll(), 'dark-checkpoint: horizontal scroll');
     await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] });
     await viewport(1366, 768);
   }

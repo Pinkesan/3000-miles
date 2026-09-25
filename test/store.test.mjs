@@ -16,6 +16,20 @@ test('a partial save gets the missing parts', () => {
   assert.equal(s.leg, null);
 });
 
+test('checkpoints and exam: fresh defaults, kept when valid, junk dropped', () => {
+  const f = freshState();
+  assert.deepEqual(f.checkpoints, {});
+  assert.equal(f.exam, null);
+  const cp = { philadelphia: { best: 2, passed: 20500, last: 20500, tries: 1 } };
+  const exam = { day: 20500, stopId: 'washington', items: [], done: 0, right: 0, missed: [] };
+  const s = normalizeState({ checkpoints: cp, exam });
+  assert.deepEqual(s.checkpoints, cp);
+  assert.deepEqual(s.exam, exam);
+  const j = normalizeState({ checkpoints: [1], exam: 'x' });
+  assert.deepEqual(j.checkpoints, {});
+  assert.equal(j.exam, null);
+});
+
 test('unknown settings values fall back to defaults', () => {
   const s = normalizeState({ settings: { newPerDay: 7, startLevel: 'C2', theme: 'pink', rate: 9, autoplay: 'yes', sound: 0, voice: 3 } });
   assert.deepEqual(s.settings, DEFAULT_SETTINGS);

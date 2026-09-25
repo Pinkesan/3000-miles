@@ -1,8 +1,9 @@
-// #/ Home (DESIGN §7). Checkpoints (Step 9), words and settings links come later.
+// #/ Home (DESIGN §7). Words and settings links come later.
 import { h, setChildren, th, en, thaiDay } from '../ui.js';
 import { icons } from '../icons.js';
 import { countMiles, countFlat } from '../srs.js';
 import { nextStop } from '../progress.js';
+import { openCheckpoint, canTry } from '../checkpoint.js';
 import { tankFill, tankText } from '../summary.js';
 import { odometer } from '../components/odometer.js';
 import { gauge } from '../components/gauge.js';
@@ -30,6 +31,8 @@ export function render(root, app) {
     : `วันนี้: ทวน ${plan.due.length} คำ · คำใหม่ ${plan.newTarget} คำ`;
 
   const next = nextStop(app.route, miles);
+  const gate = openCheckpoint(app.route, miles, store.state.checkpoints, store.state.stops);
+  const gateTried = gate && !canTry(store.state.checkpoints[gate.id], today);
   const { streak } = store.state;
   const flat = countFlat(store.state.cards);
   const hasLeg = store.state.leg?.day === today;
@@ -72,7 +75,12 @@ export function render(root, app) {
     root,
     h('header', { class: 'home-head' }, en('3000 Miles', { class: 'brand' }), th(thaiDay(today), { class: 'muted' })),
     odometer(miles),
-    next
+    gate
+      ? h('div', { class: 'sign sign-checkpoint', id: 'next-stop' },
+          h('span', { class: 'sign-small', lang: 'en' }, 'CHECKPOINT'),
+          h('span', { class: 'sign-big', lang: 'en' }, gate.city),
+          th('สอบผ่านเพื่อไปต่อ', { class: 'sign-small' }))
+      : next
       ? h('div', { class: 'sign', lang: 'en', id: 'next-stop' },
           h('span', { class: 'sign-small' }, 'NEXT STOP'),
           h('span', { class: 'sign-big' }, next.city),
@@ -103,6 +111,11 @@ export function render(root, app) {
           h('p', { class: 'day-done-title' }, 'วันนี้ขับครบแล้ว พรุ่งนี้มาขับต่อ'),
           h('p', { class: 'muted' }, 'เรียนทีละน้อยทุกวัน จำได้นานกว่าเรียนรวดเดียว'))
       : h('a', { class: 'btn btn-primary btn-main', href: '#/drive', id: 'main-btn' }, th(mainLabel)),
+    gate
+      ? gateTried
+        ? th('ลองใหม่พรุ่งนี้', { class: 'muted center', id: 'gate-tomorrow' })
+        : h('a', { class: 'btn btn-secondary', href: `#/checkpoint/${gate.id}`, id: 'gate-btn' }, th('เข้าด่าน'))
+      : null,
     dayDone && rushOpen
       ? h('a', { class: 'btn btn-primary btn-main', href: '#/arcade', id: 'rush-btn', lang: 'en' }, 'Highway Rush')
       : null,
