@@ -1,0 +1,17 @@
+{
+  "name": "3000-miles",
+  "version": "0.1.0",
+  "description": "3000 Miles: a road-trip vocabulary game for Thai learners. Learn The Oxford 3000 (American English); every word is one mile across the USA.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node tools/serve.mjs --open",
+    "test": "node --test test/*.test.mjs",
+    "check": "node tools/check-content.mjs",
+    "build:data": "node tools/build-data.mjs",
+    "ui": "node tools/ui-check.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

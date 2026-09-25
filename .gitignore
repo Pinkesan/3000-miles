@@ -1,0 +1,5 @@
+node_modules/
+.shots/
+data/raw/
+*.log
+.claude/settings.local.json
