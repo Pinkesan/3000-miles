@@ -74,6 +74,26 @@ export function letterHint(s) {
   return out;
 }
 
+// Short hint: the first character of each space-separated part + "…" (DESIGN §4).
+export function shortHint(s) {
+  return String(s).split(' ').filter(Boolean).map((part) => `${Array.from(part)[0]}…`).join(' ');
+}
+
+// Levenshtein distance.
+export function editDistance(a, b) {
+  const x = Array.from(String(a));
+  const y = Array.from(String(b));
+  let prev = Array.from({ length: y.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= x.length; i++) {
+    const row = [i];
+    for (let j = 1; j <= y.length; j++) {
+      row[j] = Math.min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + (x[i - 1] === y[j - 1] ? 0 : 1));
+    }
+    prev = row;
+  }
+  return prev[y.length];
+}
+
 export function acceptedSpellings(word) {
   const list = String(word.w).split(', ').concat(word.alt || []);
   return [...new Set(list.map(norm))];

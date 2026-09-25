@@ -212,32 +212,39 @@ test('quiz: allowedTypes follows the table in DESIGN §4', () => {
   assert.deepEqual(t('probe'), ['meaning']);
   assert.deepEqual(t('confirm'), ['spell']);
   assert.deepEqual(t('check'), ['spell']);
-  assert.deepEqual(t(1), ['meaning', 'listen']);
-  assert.deepEqual(t(2), ['word', 'listen']);
-  assert.deepEqual(t(3), ['gap', 'word']);
-  assert.deepEqual(t(4), ['gap', 'spell']);
-  for (const box of [5, 6, 7, 8]) assert.deepEqual(t(box), ['spell', 'gapType']);
+  assert.deepEqual(t(1), ['word', 'listen']);
+  assert.deepEqual(t(2), ['gap', 'spell', 'dictation']);
+  assert.deepEqual(t(3), ['spell', 'gapType', 'dictation']);
+  assert.deepEqual(t(4), ['gapType', 'dictation']);
+  for (const box of [5, 6, 7, 8]) assert.deepEqual(t(box), ['gapType', 'spell', 'dictation']);
+  assert.deepEqual(t('exam'), ['spell', 'gapType', 'dictation']);
 });
 
-test('quiz: listen is dropped without a voice, gap without an example', () => {
+test('quiz: listen and dictation are dropped without a voice, gap without an example', () => {
   const w = WORDS[0];
-  assert.deepEqual(quiz.allowedTypes(1, w, { canListen: false }), ['meaning']);
-  assert.deepEqual(quiz.allowedTypes(2, w, { canListen: false }), ['word']);
+  const mute = { canListen: false };
+  assert.deepEqual(quiz.allowedTypes(1, w, mute), ['word']);
+  assert.deepEqual(quiz.allowedTypes(2, w, mute), ['gap', 'spell']);
+  assert.deepEqual(quiz.allowedTypes(4, w, mute), ['gapType']);
   const noEx = { ...w, ex: undefined };
-  assert.deepEqual(quiz.allowedTypes(3, noEx, CAPS), ['word']);
-  assert.deepEqual(quiz.allowedTypes(5, noEx, CAPS), ['spell']);
-  assert.deepEqual(quiz.allowedTypes(4, noEx, CAPS), ['spell']);
+  assert.deepEqual(quiz.allowedTypes(1, noEx, CAPS), ['word', 'listen']);
+  assert.deepEqual(quiz.allowedTypes(2, noEx, CAPS), ['spell', 'dictation']);
+  assert.deepEqual(quiz.allowedTypes(3, noEx, CAPS), ['spell', 'dictation']);
+  assert.deepEqual(quiz.allowedTypes(5, noEx, CAPS), ['spell', 'dictation']);
+  // nothing left: spell (word in box 1)
+  assert.deepEqual(quiz.allowedTypes(4, noEx, mute), ['spell']);
+  assert.deepEqual(quiz.allowedTypes(1, noEx, mute), ['word']);
 });
 
 test('quiz: gapOnly words are asked as gap, then gapType', () => {
   const w = { ...WORDS[0], gapOnly: true };
-  for (const box of ['probe', 1, 2, 3]) assert.deepEqual(quiz.allowedTypes(box, w, CAPS), ['gap']);
-  for (const box of ['confirm', 'check', 4, 5, 8]) assert.deepEqual(quiz.allowedTypes(box, w, CAPS), ['gapType']);
+  for (const box of ['probe', 1]) assert.deepEqual(quiz.allowedTypes(box, w, CAPS), ['gap']);
+  for (const box of ['confirm', 'check', 2, 3, 4, 5, 8, 'exam']) assert.deepEqual(quiz.allowedTypes(box, w, CAPS), ['gapType']);
 });
 
 test('quiz: chooseType picks an allowed type, deterministically', () => {
   const a = quiz.chooseType(3, WORDS[0], CAPS, makeRng(4));
-  assert.ok(['gap', 'word'].includes(a));
+  assert.ok(['spell', 'gapType', 'dictation'].includes(a));
   assert.equal(a, quiz.chooseType(3, WORDS[0], CAPS, makeRng(4)));
 });
 
@@ -293,6 +300,87 @@ test('quiz: isCorrect for options and typed answers', () => {
   const sq = quiz.makeQuestion(w, 'spell', WORDS, makeRng(1));
   assert.equal(quiz.isCorrect(sq, ' WORD3 '), true);
   assert.equal(quiz.isCorrect(sq, 'word'), false);
+});
+
+test('text: editDistance and shortHint', () => {
+  assert.equal(text.editDistance('band', 'bank'), 1);
+  assert.equal(text.editDistance('quiet', 'quite'), 2);
+  assert.equal(text.editDistance('accept', 'except'), 2);
+  assert.equal(text.editDistance('', 'abc'), 3);
+  assert.equal(text.editDistance('same', 'same'), 0);
+  assert.equal(text.shortHint('banana'), 'b…');
+  assert.equal(text.shortHint('ice cream'), 'i… c…');
+  assert.equal(text.shortHint('T-shirt'), 'T…');
+});
+
+const mk = (id, w, th, more = {}) => ({ id, w, th, lv: 'A1', p: 'n', ...more });
+const LOOK_POOL = [
+  mk('band', 'band', 'วงดนตรี'), mk('bank', 'bank', 'ธนาคาร'), mk('bend', 'bend', 'โค้ง'),
+  mk('hand', 'hand', 'มือ'), mk('apple', 'apple', 'แอปเปิล'), mk('river', 'river', 'แม่น้ำ'),
+  mk('tree', 'tree', 'ต้นไม้'), mk('road', 'road', 'ถนน'),
+];
+
+test('quiz: lookAlike compares first forms', () => {
+  assert.equal(quiz.lookAlike(LOOK_POOL[0], LOOK_POOL[1]), true);
+  assert.equal(quiz.lookAlike(LOOK_POOL[0], LOOK_POOL[4]), false);
+  assert.equal(quiz.lookAlike(mk('a', 'accept', 'x'), mk('b', 'acceptable', 'y')), true); // same first 4 letters
+  assert.equal(quiz.lookAlike(mk('a', 'quiet', 'x'), mk('b', 'quiz', 'y')), false); // distance 2 > 1
+  assert.equal(quiz.lookAlike(mk('a', 'tree', 'x'), mk('b', 'tree', 'y')), false);
+  assert.equal(quiz.lookAlike(mk('a', 'big, large', 'x'), mk('b', 'bag', 'y')), true); // first form only
+});
+
+test('quiz: look-alikes come first, at most 2, and the old tiers fill up', () => {
+  for (let seed = 1; seed <= 20; seed++) {
+    const d = quiz.pickDistractors(LOOK_POOL[0], LOOK_POOL, 3, makeRng(seed));
+    assert.equal(d.length, 3);
+    assert.equal(d.filter((x) => ['bank', 'bend', 'hand'].includes(x.id)).length, 2);
+    assert.equal(new Set(d.map((x) => x.th)).size, 3);
+  }
+  // closest first: the distance-1 words are always in, a distance-2 one never beats them
+  const pool = [
+    mk('t', 'stone', 'หิน'), mk('a', 'stove', 'เตา'), mk('b', 'store', 'ร้าน'), mk('c', 'stonework', 'งานหิน'),
+    mk('z', 'zebra', 'ม้าลาย'), mk('y', 'yacht', 'เรือยอชท์'),
+  ];
+  for (let seed = 1; seed <= 10; seed++) {
+    const d = quiz.pickDistractors(pool[0], pool, 3, makeRng(seed));
+    assert.equal(d.length, 3);
+    assert.ok(d.some((x) => x.id === 'a') && d.some((x) => x.id === 'b'));
+  }
+  // a look-alike whose gloss overlaps is skipped
+  const pool2 = [
+    mk('t', 'band', 'วงดนตรี'), mk('u', 'bank', 'วงดนตรีเล็ก'), mk('v', 'cat', 'แมว'),
+    mk('w', 'dog', 'สุนัข'), mk('x', 'sun', 'ดวงอาทิตย์'),
+  ];
+  const d2 = quiz.pickDistractors(pool2[0], pool2, 3, makeRng(1));
+  assert.ok(!d2.some((x) => x.id === 'u'));
+  // no look-alikes at all: the old tiers fill everything
+  assert.equal(quiz.pickDistractors(LOOK_POOL[4], LOOK_POOL, 3, makeRng(1)).length, 3);
+});
+
+test('quiz: makeQuestion hints and dictation', () => {
+  const w = WORDS[3];
+  assert.equal(quiz.makeQuestion(w, 'spell', WORDS, makeRng(1), { hint: 'short' }).hint, 'w…');
+  assert.equal(quiz.makeQuestion(w, 'spell', WORDS, makeRng(1), { hint: 'full' }).hint, 'w _ _ _ _');
+  assert.equal(quiz.makeQuestion(w, 'gapType', WORDS, makeRng(1), { hint: 'short' }).hint, 'w…');
+  const dq = quiz.makeQuestion(w, 'dictation', WORDS, makeRng(1), { hint: 'short' });
+  assert.deepEqual(dq.accept, ['word3']);
+  assert.equal(dq.hint, null);
+  assert.equal(dq.options, undefined);
+  assert.equal(quiz.isCorrect(dq, ' Word3 '), true);
+  assert.equal(quiz.isCorrect(dq, 'word'), false);
+});
+
+test('quiz: synonymOf finds another word with an overlapping meaning', () => {
+  const pool = [
+    mk('bike', 'bike', 'รถจักรยาน'), mk('bicycle', 'bicycle', 'จักรยาน'), mk('cat', 'cat', 'แมว'),
+    mk('okay', 'OK', 'ตกลง', { alt: ['okay'] }),
+  ];
+  const target = pool[1];
+  assert.equal(quiz.synonymOf('Bike', target, pool)?.id, 'bike');
+  assert.equal(quiz.synonymOf('cat', target, pool), null);
+  assert.equal(quiz.synonymOf('bycicle', target, pool), null);
+  assert.equal(quiz.synonymOf('bicycle', target, pool), null);
+  assert.equal(quiz.synonymOf('', target, pool), null);
 });
 
 // ---- plan -------------------------------------------------------------------------------
@@ -373,6 +461,31 @@ test('plan: leg order is R R P R R P, probes only, no checks at build time', () 
   assert.equal(p2.legs, 1);
   assert.equal(f.p.legs, 0, 'input plan untouched');
   assert.equal(new Set(leg.queue.map((x) => x.key)).size, leg.queue.length);
+});
+
+test('plan: items carry a hint: full below box 4, short from box 4; confirm short, check full, re-asks copy it', () => {
+  const f = reviewFixture(4, 2);
+  f.cards.r0 = { ...f.cards.r0, b: 1 };
+  f.cards.r1 = { ...f.cards.r1, b: 3 };
+  f.cards.r2 = { ...f.cards.r2, b: 4 };
+  f.cards.r3 = { ...f.cards.r3, b: 7 };
+  const p = plan.makeDayPlan(f.cards, TODAY, { newPerDay: 2 });
+  const { leg } = plan.buildLeg({ plan: p, cards: f.cards, byId: f.byId, order: f.order, today: TODAY, rnd: makeRng(1), caps: CAPS });
+  const hints = Object.fromEntries(leg.queue.filter((x) => x.kind === 'review').map((x) => [x.id, x.hint]));
+  assert.deepEqual(hints, { r0: 'full', r1: 'full', r2: 'short', r3: 'short' });
+  // right probe -> confirm (short); wrong probe -> check (full)
+  const probe = { key: 'probe-n0', id: 'n0', kind: 'probe', type: 'meaning', confirmType: 'spell', checkType: 'spell' };
+  const right = plan.legReduce({ ...leg, queue: [probe] }, { type: 'answer', correct: true });
+  assert.equal(right.queue.find((x) => x.kind === 'confirm').hint, 'short');
+  const wrong = plan.legReduce({ ...leg, queue: [probe] }, { type: 'answer', correct: false });
+  assert.equal(wrong.queue.find((x) => x.kind === 'check').hint, 'full');
+  // a re-ask copies the hint; an old item without one is re-asked with 'full'
+  const shortItem = { key: 'review-r2', id: 'r2', kind: 'review', type: 'spell', hint: 'short' };
+  const again = plan.legReduce({ ...leg, queue: [shortItem] }, { type: 'answer', correct: false });
+  assert.equal(again.queue[0].kind, 'reask');
+  assert.equal(again.queue[0].hint, 'short');
+  const { hint, ...old } = shortItem;
+  assert.equal(plan.legReduce({ ...leg, queue: [old] }, { type: 'answer', correct: false }).queue[0].hint, 'full');
 });
 
 test('plan: a leg has at most 20 items with 14 reviews first, and skips words graded today', () => {

@@ -42,7 +42,7 @@
 - [x] **Step 5.** Road test: ask before teaching, no free miles, start level → [steps/05-road-test.md](steps/05-road-test.md)
 - [x] **C1.** Content a2-01, b1-01, b2-01 → [CONTENT-GUIDE.md](CONTENT-GUIDE.md)
 - [x] **Plan change 2.** Limit new words, not play: one ขับเพิ่ม leg a day (code done), Highway Rush moved up to follow Step 7. Done with Opus on 2026-09-25.
-- [ ] **Step 6.** Harder questions: look-alike options, typing, dictation, short hints → [steps/06-harder-questions.md](steps/06-harder-questions.md)
+- [x] **Step 6.** Harder questions: look-alike options, typing, dictation, short hints → [steps/06-harder-questions.md](steps/06-harder-questions.md)
 - [ ] **Step 7.** Score, combo, stars → [steps/07-score.md](steps/07-score.md)
 - [ ] **Step 12.** Highway Rush: 60-second arcade after the day's plan, three strikes (moved up; the number stays) → [steps/12-highway-rush.md](steps/12-highway-rush.md)
 - [ ] **C2.** Content a2-02, b1-02, b2-02
@@ -98,6 +98,7 @@ Token economy:
 
 ## Log
 
+- 2026-09-26: Step 6. `text.editDistance/shortHint`; `quiz`: DESIGN §4 table (box 1 = word/listen, meaning only as a probe; `dictation` needs a voice; `exam` row), `lookAlike`, look-alike tier in `pickDistractors` (max 2, closest first), `makeQuestion(..., { hint })`, `synonymOf`; `plan`: every item has `hint` (review short from box 4, confirm short, check full, re-asks copy it). New `components/question.js` (prompt, options/input, feedback, synonym retry, dictation); `drive.js` keeps the leg flow. ui-check: `types` shows all 7 types, look-alike and short-hint checks, new scene `synonym`; `JS errors: none`. 89 tests pass. Deviations: a look-alike beyond 2 is used only when nothing else is left; by the §4 formula quiet/quite (distance 2, length 5) is not a look-alike; the results screen and `#/card` are unchanged.
 - 2026-09-25: Plan change 2 (Opus). The player drove extra legs until the cap of 100 new
   words a day and had nothing left to play. A 500-day simulation with `srs.js` +
   `makeDayPlan`: above ~15 new words a day the 100-review cap blocks new words on many days

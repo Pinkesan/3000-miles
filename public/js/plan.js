@@ -99,7 +99,7 @@ export function buildLeg({ plan, cards, byId, order, today, rnd, caps, extra = f
       const card = cards[id];
       const word = wordOf(byId, id);
       if (!card || !word || gradedToday(card, today)) continue;
-      reviews.push({ key: `review-${id}`, id, kind: 'review', type: chooseType(card.b, word, caps, rnd) });
+      reviews.push({ key: `review-${id}`, id, kind: 'review', type: chooseType(card.b, word, caps, rnd), hint: card.b >= 4 ? 'short' : 'full' });
     }
   }
   const room = LEG_SIZE - reviews.length;
@@ -141,18 +141,18 @@ export function legReduce(leg, event) {
   const next = { ...leg, done: leg.done + 1 };
   if (cur.kind === 'probe') {
     if (event.type === 'answer' && event.correct) {
-      const confirm = { key: `confirm-${cur.id}`, id: cur.id, kind: 'confirm', type: cur.confirmType ?? 'spell' };
+      const confirm = { key: `confirm-${cur.id}`, id: cur.id, kind: 'confirm', type: cur.confirmType ?? 'spell', hint: 'short' };
       return { ...next, queue: insertAt(rest, CONFIRM_GAP, confirm) };
     }
     // wrong or skipped: the lesson follows, then the check. A probe is never re-asked.
     const meet = { key: `meet-${cur.id}`, id: cur.id, kind: 'meet', type: 'meet' };
-    const check = { key: `check-${cur.id}`, id: cur.id, kind: 'check', type: cur.checkType ?? 'spell' };
+    const check = { key: `check-${cur.id}`, id: cur.id, kind: 'check', type: cur.checkType ?? 'spell', hint: 'full' };
     return { ...next, queue: [meet, ...insertAt(rest, CHECK_GAP, check)] };
   }
   if (event.correct) return { ...next, queue: rest };
   const n = leg.reasks[cur.id] || 0;
   if (n >= MAX_REASKS) return { ...next, queue: rest };
-  const reask = { key: `reask-${cur.id}-${n + 1}`, id: cur.id, kind: 'reask', type: cur.type };
+  const reask = { key: `reask-${cur.id}-${n + 1}`, id: cur.id, kind: 'reask', type: cur.type, hint: cur.hint ?? 'full' };
   return { ...next, reasks: { ...leg.reasks, [cur.id]: n + 1 }, queue: insertAt(rest, REASK_GAP, reask) };
 }
 

@@ -1,13 +1,15 @@
 // UI smoke test: drives headless Chrome through the app, saves screenshots to .shots/ and
 // reports JS errors. Starts its own server (port 0), so the game server on 5320 is left alone.
 //   npm run ui
-//   ONLY=home,card npm run ui   (scenes: home card drive types resume done mobile dark light)   (Git Bash)   PowerShell: $env:ONLY='home'; npm run ui
+//   ONLY=home,card npm run ui   (scenes: home card drive types synonym resume done mobile dark light)   (Git Bash)   PowerShell: $env:ONLY='home'; npm run ui
 // Option: CHROME=path/to/chrome.exe
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer } from './serve.mjs';
+import { lookAlike } from '../public/js/quiz.js';
+import { glossOverlap } from '../public/js/text.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CHROME =
@@ -153,9 +155,9 @@ async function loadWith(partial = {}) {
   await waitFor(pageReady);
 }
 
-// 14 reviews due today in boxes 1..8, so every question type shows up in one leg.
+// 14 reviews due today in boxes 1..8, so every question type shows up in one leg (seed 1).
 function reviewCards() {
-  const boxes = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 8];
+  const boxes = [1, 1, 1, 1, 2, 2, 2, 3, 3, 4, 5, 6, 7, 8];
   const cards = {};
   boxes.forEach((b, i) => {
     cards[words[i].id] = { b, d: 20500, g: 20490, n: 3, r: 3, l: 0, ...(b >= 3 ? { m: i + 1, md: 20495 } : {}) };
@@ -195,6 +197,20 @@ async function playLeg({ prefix = '', stopAtQuestion = false } = {}) {
       check(await evaluate(`document.querySelectorAll('.wc-actions button').length === 1`), 'drive: the Meet card has one button');
       await evaluate(`document.querySelector('.wc-actions .btn-primary').click()`);
     } else {
+      if ((q.type === 'word' || q.type === 'gap') && item.kind !== 'probe') {
+        const target = words.find((w) => w.id === q.id);
+        const canAlike = words.some((x) => x.id !== target.id && x.w.toLowerCase() !== target.w.toLowerCase()
+          && lookAlike(target, x) && !glossOverlap(x.th, target.th));
+        const alike = q.options.filter((o) => o.id !== q.id && lookAlike(target, words.find((w) => w.id === o.id))).length;
+        if (canAlike) check(alike >= 1, `${prefix}drive ${q.type}: no look-alike option for ${target.w}`);
+        check(alike <= 2 || !canAlike, `${prefix}drive ${q.type}: more than 2 look-alikes for ${target.w}`);
+        if (canAlike) await shotOnce('drive-lookalike');
+      }
+      if (q.hint && q.hint.includes('…')) await shotOnce('drive-short-hint');
+      if (q.type === 'dictation') {
+        check(await evaluate(`!!document.querySelector('.listen-btn') && !document.querySelector('.q-hint') && document.activeElement === document.querySelector('.answer-input')`),
+          `${prefix}drive dictation: 🔊 button, no hint, input focused`);
+      }
       if (!seen.has(q.type)) {
         seen.add(q.type);
         await shotOnce(`drive-${q.type}`);
@@ -315,13 +331,47 @@ try {
   }
 
   if (want('drive') || want('types')) {
-    // reviews in every box: all six question types, at phone size
+    // reviews in every box: all seven question types, at phone size
     await viewport(390, 844, true);
     await loadWith({ cards: reviewCards() });
     await setHash('#/drive');
     const seen = await playLeg({ prefix: 'm-' });
-    for (const t of ['meaning', 'listen', 'word', 'gap', 'spell', 'gapType']) check(seen.has(t), `types: ${t} never appeared (saw ${[...seen]})`);
+    for (const t of ['meaning', 'listen', 'word', 'gap', 'spell', 'gapType', 'dictation']) check(seen.has(t), `types: ${t} never appeared (saw ${[...seen]})`);
     await viewport(1366, 768);
+  }
+
+  if (want('synonym')) {
+    // bicycle asked for จักรยาน: typing the synonym bike is not graded, one more try
+    const bicycle = words.find((w) => w.w === 'bicycle');
+    const bike = words.find((w) => w.w === 'bike');
+    check(!!bicycle && !!bike, 'synonym: a1-01 has bike and bicycle');
+    if (bicycle && bike) {
+      const card = { b: 5, d: 20500, g: 20490, n: 3, r: 3, l: 0, m: 1, md: 20495 };
+      const leg = {
+        v: 2, day: 20500, done: 0, reasks: {}, newCount: 0, startMiles: 1, ids: [bicycle.id],
+        stats: { right: 0, wrong: 0, taught: 0, known: 0, reviewed: 0, miles: 0 },
+        queue: [{ key: 'review-bicycle', id: bicycle.id, kind: 'review', type: 'spell', hint: 'short' }],
+      };
+      await viewport(390, 844, true);
+      await loadWith({ cards: { [bicycle.id]: card }, leg });
+      await setHash('#/drive');
+      await waitFor(`!!__app.item()`);
+      const type = async (text) => {
+        await evaluate(`document.querySelector('.answer-input').focus()`);
+        await send('Input.insertText', { text });
+        await evaluate(`document.querySelector('.answer-form button').click()`);
+      };
+      check(await evaluate(`document.querySelector('.q-hint').textContent === 'b…'`), 'synonym: short hint b…');
+      await type(bike.w);
+      check(await evaluate(`!!document.querySelector('.fb-retry') && !document.querySelector('.fb-msg')`), 'synonym: retry message, no verdict');
+      check(await evaluate(`document.querySelector('.answer-input').value === '' && !document.querySelector('.answer-input').disabled`), 'synonym: input cleared and open');
+      const kept = JSON.parse(await evaluate(`localStorage.getItem(${JSON.stringify(KEY)})`)).cards[bicycle.id];
+      check(kept.b === 5 && kept.g === 20490, 'synonym: the card is unchanged');
+      await shot('m-drive-synonym');
+      await type(bicycle.w);
+      check(await evaluate(`!!document.querySelector('.fb-right')`), 'synonym: the right word is right');
+      await viewport(1366, 768);
+    }
   }
 
   if (want('resume')) {

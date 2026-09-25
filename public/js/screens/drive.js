@@ -2,21 +2,16 @@
 import { h, setChildren, th, en, confirmBox } from '../ui.js';
 import { icons } from '../icons.js';
 import { makeRng } from '../rng.js';
-import { POS_LABEL, blankGap, plain, posList } from '../text.js';
 import { makeQuestion, isCorrect } from '../quiz.js';
 import { buildLeg, legCurrent, legProgress, legReduce, recordAnswer } from '../plan.js';
 import { countMiles } from '../srs.js';
 import { queueIds } from '../summary.js';
 import * as sfx from '../sfx.js';
-import { wordCard, exampleLine } from '../components/wordcard.js';
+import { wordCard } from '../components/wordcard.js';
+import { questionView, advancesAlone } from '../components/question.js';
 
-const CHEERS = ['ถูกต้อง', 'เยี่ยม', 'แม่นมาก'];
 const STAGE_TAG = { probe: 'คำใหม่ รู้จักไหม', confirm: 'เช็กว่ารู้จริง', reask: 'ลองอีกครั้ง' };
-const AUTO_TYPES = ['meaning', 'word', 'listen'];
-const posLabel = (w) => POS_LABEL[w.p]?.en ?? posList(w);
 const firstForm = (w) => w.w.split(', ')[0];
-const speaker = (label, onclick) =>
-  h('button', { class: 'icon-btn', type: 'button', 'aria-label': label, title: label, html: icons.speaker, onclick });
 
 export function render(root, app) {
   const { store, byId } = app;
@@ -97,7 +92,7 @@ export function render(root, app) {
       store.update((s) => { s.leg = leg; });
       return show();
     }
-    cur = { item, word, q: null, answered: false, advanced: false, replays: 0 };
+    cur = { item, word, q: null, view: null, answered: false, advanced: false };
     updateBar();
     window.scrollTo(0, 0);
     if (item.kind === 'meet') showMeet(word);
@@ -118,57 +113,25 @@ export function render(root, app) {
   }
 
   function showQuestion(item, word) {
-    const q = makeQuestion(word, item.type, app.words, makeRng(`${today}:${item.key}`));
+    const q = makeQuestion(word, item.type, app.words, makeRng(`${today}:${item.key}`), { hint: item.hint ?? 'full' });
     cur.q = q;
-    const pos = h('p', { class: 'q-pos', lang: 'en' }, posLabel(word));
-    const typed = !q.options;
-    const hasGap = q.type === 'gap' || q.type === 'gapType';
-    const prompt = [];
-    if (q.type === 'meaning') prompt.push(en(word.w, { class: 'q-word' }), pos);
-    else if (q.type === 'listen') {
-      prompt.push(h('button', { class: 'listen-btn', type: 'button', 'aria-label': 'ฟังเสียง', html: icons.speaker, onclick: replay }), pos);
-    } else if (hasGap) {
-      prompt.push(h('p', { class: 'q-sentence', lang: 'en' }, blankGap(word.ex)));
-      if (word.exTh) prompt.push(th(word.exTh, { class: 'q-sentence-th' }));
-    } else prompt.push(th(word.th, { class: 'q-th' }), pos);
-    if (typed) prompt.push(h('p', { class: 'q-hint', lang: 'en', 'aria-label': `${q.hint.replace(/ /g, '').length} ตัวอักษร` }, q.hint));
-
-    let control;
-    if (typed) {
-      cur.input = h('input', {
-        class: 'answer-input', type: 'text', autocomplete: 'off', autocapitalize: 'off', autocorrect: 'off',
-        spellcheck: 'false', lang: 'en', enterkeyhint: 'done', 'aria-label': 'พิมพ์คำตอบ',
-      });
-      control = cur.form = h('form', {
-        class: 'answer-form',
-        onsubmit: (e) => { e.preventDefault(); if (!cur.answered && cur.input.value.trim()) answer(cur.input.value); },
-      }, cur.input, h('button', { class: 'btn btn-primary', type: 'submit' }, th('ตรวจคำตอบ')));
-    } else {
-      const lang = q.type === 'word' || q.type === 'gap' ? 'en' : 'th';
-      control = cur.list = h('ol', { class: 'options' }, q.options.map((o, i) =>
-        h('li', {}, h('button', { class: 'opt', type: 'button', dataset: { id: o.id }, onclick: () => answer(o.id) },
-          h('span', { class: 'opt-n', 'aria-hidden': 'true' }, i + 1),
-          h('span', { class: 'opt-label', lang }, o.label)))));
-    }
-    cur.fb = h('div', { class: 'feedback', 'aria-live': 'polite' });
-    if (item.kind === 'probe') {
-      cur.skip = h('button', { class: 'btn btn-secondary btn-skip', type: 'button', onclick: skip }, th('ไม่รู้จักคำนี้'));
-    }
-    setChildren(stage,
-      h('p', { class: 'stage-tag' }, th(STAGE_TAG[item.kind] ?? 'คำถาม')),
-      h('div', { class: `prompt prompt-${q.type}` }, prompt), control, cur.skip, cur.fb);
-
-    if (q.type === 'listen') app.say(firstForm(word));
-    else if (q.type === 'meaning' && app.settings.autoplay) app.say(firstForm(word));
-    if (typed) cur.input.focus({ preventScroll: true });
+    cur.view = questionView(app, q, {
+      tag: STAGE_TAG[item.kind] ?? 'คำถาม',
+      kind: item.kind,
+      canSkip: item.kind === 'probe',
+      cheer: leg.done,
+      onAnswer: answer,
+      onSkip: skip,
+      onNext: advance,
+    });
+    setChildren(stage, cur.view.el);
+    cur.view.start();
   }
 
   function replay() {
     if (!cur) return;
-    if (cur.q?.type === 'listen') {
-      cur.replays += 1;
-      app.say(firstForm(cur.word), { rate: cur.replays % 2 ? 0.75 : undefined });
-    } else app.say(firstForm(cur.word));
+    if (cur.view) cur.view.replay();
+    else app.say(firstForm(cur.word));
   }
 
   function answer(response) {
@@ -179,7 +142,6 @@ export function render(root, app) {
     const res = recordAnswer({ cards: store.state.cards, plan: store.state.days[today], leg, today, item, correct });
     leg = legReduce(res.leg, { type: 'answer', correct });
     store.update((s) => { s.cards = res.cards; s.days[today] = res.plan; s.leg = leg; });
-    if (cur.skip) cur.skip.disabled = true;
 
     if (res.mile) {
       sfx.mile();
@@ -189,8 +151,8 @@ export function render(root, app) {
     } else if (correct) sfx.right();
     else sfx.wrong();
 
-    paintFeedback(correct, response);
-    if (correct && AUTO_TYPES.includes(q.type)) timer = setTimeout(advance, 900);
+    cur.view.paint(correct, response);
+    if (advancesAlone(q, correct)) timer = setTimeout(advance, 900);
   }
 
   // "ไม่รู้จักคำนี้": no answer is graded, the lesson comes at once
@@ -201,58 +163,6 @@ export function render(root, app) {
     leg = legReduce(leg, { type: 'skip' });
     store.update((s) => { s.leg = leg; });
     show();
-  }
-
-  function paintFeedback(correct, response) {
-    const { q, word } = cur;
-    const isGap = q.type === 'gap' || q.type === 'gapType';
-    let answerText;
-    let answerLang = 'en';
-    if (q.options) {
-      const right = q.options.find((o) => o.id === q.id);
-      answerText = right.label;
-      answerLang = q.type === 'word' || q.type === 'gap' ? 'en' : 'th';
-      for (const btn of cur.list.querySelectorAll('.opt')) {
-        btn.disabled = true;
-        const isRight = btn.dataset.id === q.id;
-        if (isRight || btn.dataset.id === response) {
-          btn.classList.add(isRight ? 'opt-right' : 'opt-wrong');
-          btn.append(h('span', { class: 'opt-mark', html: isRight ? icons.check : icons.x }));
-        }
-      }
-    } else {
-      answerText = q.accept[0];
-      cur.input.disabled = true;
-      cur.input.classList.add(correct ? 'is-right' : 'is-wrong');
-      cur.form.querySelector('button').disabled = true;
-    }
-
-    const parts = [
-      correct
-        ? h('p', { class: 'fb-msg fb-right' }, h('span', { html: icons.check }), th(CHEERS[leg.done % CHEERS.length]))
-        : h('p', { class: 'fb-msg fb-wrong' }, h('span', { html: icons.x }), th('ยังไม่ใช่ คำตอบคือ '), h('b', { lang: answerLang }, answerText)),
-    ];
-    const probe = cur.item.kind === 'probe';
-    if (!correct && !probe) parts.push(miniCard(word));
-    else if (isGap) parts.push(h('p', { class: 'fb-sentence' }, exampleLine(word.ex)));
-    else if (q.type === 'listen') parts.push(en(word.w, { class: 'fb-word' }));
-    if (!(correct && AUTO_TYPES.includes(q.type))) {
-      parts.push(h('button', { class: 'btn btn-primary btn-next', type: 'button', onclick: advance }, th(!correct && probe ? 'เรียนคำนี้' : 'ต่อไป')));
-    }
-    setChildren(cur.fb, parts);
-
-    if (isGap) app.say(plain(word.ex));
-    else if (!['meaning', 'listen'].includes(q.type)) app.say(firstForm(word));
-    cur.fb.querySelector('.btn-next')?.focus({ preventScroll: true });
-  }
-
-  function miniCard(word) {
-    return h('div', { class: 'minicard' },
-      h('div', { class: 'mc-head' },
-        en(word.w, { class: 'mc-w' }), en(posLabel(word), { class: 'mc-pos' }), th(word.th, { class: 'mc-th' }),
-        speaker('ฟังเสียงคำศัพท์', () => app.say(firstForm(word)))),
-      word.ex ? h('p', { class: 'mc-ex' }, exampleLine(word.ex)) : null,
-    );
   }
 
   function advance() {
@@ -273,7 +183,7 @@ export function render(root, app) {
     if (e.key === ' ') {
       const t = cur.q?.type;
       if (cur.item.kind === 'meet' || cur.answered || t === 'meaning' || t === 'listen') { e.preventDefault(); replay(); }
-    } else if (e.key === '0' && cur.skip && !cur.answered) skip();
+    } else if (e.key === '0' && cur.view?.skip && !cur.answered) skip();
     else if (/^[1-4]$/.test(e.key) && cur.q?.options && !cur.answered) {
       const o = cur.q.options[Number(e.key) - 1];
       if (o) answer(o.id);
