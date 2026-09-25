@@ -1,4 +1,4 @@
-# Step 11. Fix reported words + portfolio polish
+# Step 15. Fix reported words + portfolio polish
 
 **Goal.** Close the loop on content quality (words the player flagged while playing) and
 make the project presentable as a portfolio piece.
@@ -22,9 +22,11 @@ make the project presentable as a portfolio piece.
 4. Performance check on a 4× CPU slowdown (`Emulation.setCPUThrottlingRate` in a ui-check
    scene): home under 1.5 s after load, a question renders under 100 ms. If `words.json`
    is the bottleneck, split it per level and load the other levels after the first screen.
+   The look-alike search (edit distance against every loaded word) is the other likely
+   cost: cache each word's look-alike ids the first time they are needed.
 5. A last copy pass over all Thai UI strings against DESIGN §9 (one list in the report).
 6. Ask the user whether to publish the repo on GitHub (it contains nothing private, but
-   check the account state first, see Step 7) and whether to link it from the portfolio
+   check the account state first, see Step 11) and whether to link it from the portfolio
    (`Desktop\ผลงาน\00-portfolio-เล่มเดิม`). Don't push without a yes.
 
 ## Done when

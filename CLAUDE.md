@@ -52,8 +52,9 @@ parts of `speech.js`, the CDP harness in `tools/ui-check.mjs`.
 
 ## Rules that are easy to break
 
-1. Pure modules (`rng day srs text quiz plan progress`, later `fastlane arcade`) never
-   touch DOM, storage or `Date.now()`; `today` and `rnd` are parameters; inputs aren't mutated.
+1. Pure modules (`rng day srs text quiz plan progress summary`, later `score checkpoint
+   arcade fastlane`) never touch DOM, storage or `Date.now()`; `today` and `rnd` are
+   parameters; inputs aren't mutated.
 2. A screen's `render(root, app, params)` is synchronous and may return `{ destroy() }`;
    async work checks a `destroyed` flag.
 3. Never pass `null` to `replaceChildren()`/`append()`: use `h()`/`setChildren()` from
@@ -61,7 +62,9 @@ parts of `speech.js`, the CDP harness in `tools/ui-check.mjs`.
    `h(tag, { style: { '--x': v } })`. Keep `[hidden] { display: none !important; }`.
 4. No `alert/confirm/prompt`: use `confirmBox()` and `toast()`.
 5. Only the first graded answer of a word per day changes its state (`card.g`); re-asks
-   are practice. Save the state after every graded answer.
+   are practice. A probe creates no card, and a right checkpoint answer changes nothing
+   (DESIGN §3). Score, combo and Highway Rush never touch cards. Save the state after
+   every graded answer.
 6. All randomness goes through `makeRng(seed)`. `?test&seed=1&today=20500` makes runs
    repeatable; in test mode the app exposes `window.__app` for the UI check.
 7. No requests to other sites at runtime (fonts are self-hosted), so the app works offline.

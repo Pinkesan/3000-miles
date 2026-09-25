@@ -1,4 +1,4 @@
-// #/ Home (DESIGN §7). The gauge, streak and route come in Step 5.
+// #/ Home (DESIGN §7). The gauge, streak and route come in Step 8.
 import { h, setChildren, th, en, thaiDay } from '../ui.js';
 import { countMiles } from '../srs.js';
 import { odometer } from '../components/odometer.js';

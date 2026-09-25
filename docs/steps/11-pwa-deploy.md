@@ -1,4 +1,4 @@
-# Step 7. Install on the phone: PWA, offline, deploy
+# Step 11. Install on the phone: PWA, offline, deploy
 
 **Goal.** The game can be installed on a phone's home screen, works offline, updates
 itself, and is online at an HTTPS address the user chose.
@@ -26,7 +26,9 @@ itself, and is online at an HTTPS address the user chose.
 4. Update flow: a waiting worker → toast "มีเวอร์ชันใหม่" with **อัปเดต** → `postMessage
    ('skipWaiting')` → reload on `controllerchange`. Bump the version (package.json,
    version.js, sw.js) in every step that changes `public/` from now on (add this rule to
-   CLAUDE.md "Definition of done").
+   CLAUDE.md "Definition of done"). Content steps only change `public/data/` (network
+   first), so they need no bump, but the site must be uploaded again: say so in their
+   report (add that line to the C-step part of `docs/ROADMAP.md` "How to work").
 5. `navigator.storage?.persist?.()` on the first run (store the result in settings to
    show in the settings screen: "ข้อมูลถูกเก็บแบบถาวร" or the iPhone hint).
 6. `tools/ui-check.mjs` scene `pwa`: open BASE **without** `?test`, wait for

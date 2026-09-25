@@ -1,4 +1,4 @@
-// #/results: summary of the last leg (DESIGN §7). The gauge and postcards come in Step 5.
+// #/results: summary of the last leg (DESIGN §7). The gauge and postcards come in Step 8.
 import { h, setChildren, th, en } from '../ui.js';
 import { odometer } from '../components/odometer.js';
 import { DAY_NEW_CAP, nextNew } from '../plan.js';

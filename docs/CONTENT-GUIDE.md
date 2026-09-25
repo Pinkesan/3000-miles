@@ -108,14 +108,18 @@ glosses; the same `th` as another entry in the batch.
 | step | batches | words |
 |---|---|---|
 | Step 1 (pilot) | a1-01 | 100 |
-| C1 | a1-02 a1-03 a1-04 a1-05 | 400 |
-| C2 | a1-06 a1-07 a1-08 a1-09 | 400 |
-| C3 | a2-01 a2-02 a2-03 a2-04 | 400 |
-| C4 | a2-05 a2-06 a2-07 a2-08 | 400 |
-| C5 | b1-01 b1-02 b1-03 b1-04 | 400 |
-| C6 | b1-05 b1-06 b1-07 | 300 |
-| C7 | b2-01 b2-02 b2-03 | 300 |
-| C8 | b2-04 b2-05 b2-06 | 300 |
+| C1 | a2-01 b1-01 b2-01 | 300 |
+| C2 | a2-02 b1-02 b2-02 | 300 |
+| C3 | a2-03 b1-03 b2-03 | 300 |
+| C4 | a2-04 b1-04 b2-04 | 300 |
+| C5 | a2-05 b1-05 b2-05 | 300 |
+| C6 | a2-06 b1-06 b2-06 | 300 |
+| C7 | a2-07 a2-08 b1-07 | 300 |
+| C8 | a1-02 a1-03 a1-04 a1-05 | 400 |
+| C9 | a1-06 a1-07 a1-08 a1-09 | 400 |
 
-B1/B2 steps have fewer batches because the words need more care. If a session runs long,
-stop after a finished batch, log what is left, and let the next session continue the step.
+The player knows most A1 words, so A2, B1 and B2 come first, and each step adds words at
+all three of those levels (the start-level setting can then point at any of them). Steps
+with B-level batches have three batches because those words need more care. Write the
+batches in the order of the table. If a session runs long, stop after a finished batch,
+log what is left, and let the next session continue the step.

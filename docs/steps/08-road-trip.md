@@ -1,8 +1,10 @@
-# Step 5. Road trip: route, map, postcards, fuel gauge, streak
+# Step 8. Road trip: route, map, postcards, fuel gauge, streak
 
 **Goal.** The progress layer of DESIGN §6: the odometer roll, the next-stop sign, the fuel
 gauge, the streak with rest stops, flat tires, the route map and the postcards. This is
-what makes it feel like a game.
+what makes it feel like a trip. Step 9 puts a checkpoint exam at every stop; until then,
+reaching a stop unlocks its postcard. Keep that unlock in one small function (for example
+`unlockReached` in `results.js`) so Step 9 can change it in one place.
 
 **Read first.** DESIGN §6, §7 (home, results, map, postcard), §8, §9;
 `public/js/progress.js` (API), `public/js/screens/home.js`, `public/js/screens/results.js`,
@@ -28,14 +30,16 @@ what makes it feel like a game.
 6. When the tank first becomes full today: `fillTank`, save, toast "เติมน้ำมันเต็มถังแล้ว
    วันนี้ขับครบ" (on the results screen).
 7. Results: the odometer rolls from `startMiles` to `endMiles`; `reachedStops(route,
-   startMiles, endMiles)` → save `state.stops[id] = today`, play `sfx.stop()`, and show a
-   postcard button per new stop ("ถึง<city>แล้ว! ได้โปสการ์ดใบใหม่").
+   startMiles, endMiles)` → `unlockReached`: save `state.stops[id] = today`, play
+   `sfx.stop()`, and show a postcard button per new stop ("ถึง<city>แล้ว! ได้โปสการ์ดใบใหม่").
+   Place it with the score and stars of Step 7 so the screen still reads top to bottom.
 8. `public/js/screens/map.js` (`#/map`): the vertical road (New York top, Santa Monica
    bottom) drawn with CSS/SVG: the 16 stops as mile markers (`at` numbers); reached stops
    show a small postcard tile (tap → postcard); the next stop shows a guide sign with the
    miles to go; later stops are muted; the car at `carFraction(route, miles)`. Scroll the
    car into view on open (no smooth scroll with reduced motion).
-9. `public/js/screens/postcard.js` (`#/postcard/<id>`): locked stop → `#/map`. Front:
+9. `public/js/screens/postcard.js` (`#/postcard/<id>`): a stop not in `state.stops` →
+   `#/map` (New York is always unlocked). Front:
    "Greetings from" + the city in big block letters, colored by `color` (DESIGN §8, no
    photos). Back: `fact` + 🔊, `factTh`, then "คำที่ได้ในช่วงนี้" = up to 12 words from
    `stopWords` (w + th) and the total count. A flip-in when it opens (300 ms; none with
@@ -44,7 +48,7 @@ what makes it feel like a game.
 10. `tools/ui-check.mjs` scenes (seed `state` in localStorage before load, using real ids
     from `words.json`):
     - `map`: miles = min(600, words with content): the map with the car past Cleveland.
-    - `postcard`: miles 95 → open `#/postcard/philadelphia`.
+    - `postcard`: miles 95 and `stops.philadelphia` set → open `#/postcard/philadelphia`.
     - `arrive`: miles 89 and one due review in box 2 (its next right answer makes the 90th
       mile): play the leg; the results must show the Philadelphia postcard button.
     - `streak`: seed `{ cur: 6, best: 9, last: today − 1, rests: 1 }` and today's plan with
