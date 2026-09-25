@@ -3,7 +3,7 @@ import { h, setChildren, th, en } from '../ui.js';
 import { odometer } from '../components/odometer.js';
 import { DAY_NEW_CAP, nextNew } from '../plan.js';
 import { gradedToday } from '../srs.js';
-import { legSummary, tankText } from '../summary.js';
+import { legSummary, tankText, levelTip } from '../summary.js';
 import * as sfx from '../sfx.js';
 
 const stat = (value, label) =>
@@ -37,9 +37,10 @@ export function render(root, app) {
   const newLeft = !!plan && plan.shown.length < DAY_NEW_CAP && nextNew(app.order, cards, plan, 1).length > 0;
   const planDone = !!plan && plan.done >= plan.goal;
   const reviewsLeft = !!plan && plan.due.some((id) => cards[id] && !gradedToday(cards[id], today));
-  const canContinue = !planDone && (reviewsLeft || (plan.taught < plan.newTarget && newLeft));
+  const canContinue = !planDone && (reviewsLeft || (plan.taught + plan.known < plan.newTarget && newLeft));
   const canExtra = planDone && newLeft;
 
+  const tip = plan ? levelTip(plan, app.settings.startLevel) : null;
   const words = last.ids.map((id) => byId.get(id)).filter(Boolean);
   setChildren(
     root,
@@ -55,6 +56,11 @@ export function render(root, app) {
       stat(sum.reviewed, 'ทวน'),
     ),
     plan ? h('p', { class: 'today-line', id: 'tank-line' }, th(tankText(plan))) : null,
+    tip
+      ? h('p', { class: 'today-line level-tip', id: 'level-tip' },
+          th(`คำใหม่วันนี้รู้อยู่แล้ว ${tip.known} จาก ${tip.total} คำ ลองเริ่มจากระดับที่สูงขึ้น `),
+          h('a', { href: '#/' }, th('เปลี่ยนได้ที่หน้าแรก')))
+      : null,
     h('div', { class: 'results-actions' },
       canContinue ? h('a', { class: 'btn btn-primary btn-main', href: '#/drive', id: 'again-btn' }, th('ขับต่อ')) : null,
       canExtra ? h('a', { class: 'btn btn-primary btn-main', href: '#/drive', id: 'again-btn' }, th('ขับเพิ่ม')) : null,

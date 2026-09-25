@@ -12,8 +12,8 @@ export function exampleLine(ex) {
   return h('span', { lang: 'en' }, before, h('mark', {}, target), after);
 }
 
-// opts: { onKnow, onLearned } add the two buttons; without them it is a preview.
-export function wordCard(app, word, { onLearned, onKnow } = {}) {
+// opts: { onLearned } adds the จำแล้ว button; without it it is a preview.
+export function wordCard(app, word, { onLearned } = {}) {
   const sayWord = () => app.say(word.w.split(', ')[0]);
   const senses = (word.other || []).map(([p, t]) =>
     h('li', {}, h('span', { class: 'pos' }, POS_LABEL[p]?.en ?? p), ' ', th(t)),
@@ -40,11 +40,9 @@ export function wordCard(app, word, { onLearned, onKnow } = {}) {
           word.exTh ? h('p', { class: 'wc-ex-th' }, th(word.exTh)) : null,
         )
       : null,
-    onLearned || onKnow
+    onLearned
       ? h('div', { class: 'wc-actions' },
-          onLearned ? h('button', { class: 'btn btn-primary', type: 'button', onclick: onLearned }, th('จำแล้ว')) : null,
-          onKnow ? h('button', { class: 'btn btn-secondary', type: 'button', onclick: onKnow }, th('รู้จักคำนี้แล้ว')) : null,
-        )
+          h('button', { class: 'btn btn-primary', type: 'button', onclick: onLearned }, th('จำแล้ว')))
       : null,
   );
 }

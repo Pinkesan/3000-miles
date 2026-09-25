@@ -168,31 +168,58 @@ const fakeLastLeg = () => ({
   ids: words.slice(0, 9).map((w) => w.id),
 });
 
-// Plays the leg like a player: clicks and types. The 3rd meet is "I know this"; the 2nd graded
-// answer is wrong. Shoots each question type the first time it appears. Returns the types seen.
+// Plays the leg like a player: clicks and types. Probes: right, skip, wrong, then right / skip
+// alternating; the 2nd typed answer is wrong, everything else is right. Shoots each question type
+// the first time it appears. Returns the types seen.
 async function playLeg({ prefix = '', stopAtQuestion = false } = {}) {
   const seen = new Set();
-  let meets = 0;
-  let graded = 0;
-  let wrongShot = false;
+  let probes = 0;
+  let typed = 0;
+  let expectMeet = null;
+  const shots = new Set();
+  const shotOnce = async (name) => {
+    if (shots.has(name)) return;
+    shots.add(name);
+    await shot(`${prefix}${name}`);
+  };
   for (let guard = 0; guard < 200; guard++) {
     await waitFor(`!!__app.item() || location.hash === '#/results'`);
     if (await evaluate(`location.hash === '#/results'`)) return seen;
     const { item, q } = JSON.parse(await evaluate(`JSON.stringify({ item: __app.item(), q: __app.question() })`));
+    if (expectMeet) {
+      check(item.kind === 'meet' && item.id === expectMeet, `drive: the Meet card follows a skipped or wrong probe (got ${item.kind})`);
+      expectMeet = null;
+    }
     if (item.kind === 'meet') {
-      meets += 1;
-      if (meets === 1) await shot(`${prefix}drive-meet`);
-      const know = meets === 3;
-      await evaluate(`document.querySelector('.wc-actions .${know ? 'btn-secondary' : 'btn-primary'}').click()`);
+      await shotOnce('drive-meet');
+      check(await evaluate(`document.querySelectorAll('.wc-actions button').length === 1`), 'drive: the Meet card has one button');
+      await evaluate(`document.querySelector('.wc-actions .btn-primary').click()`);
     } else {
       if (!seen.has(q.type)) {
         seen.add(q.type);
-        await shot(`${prefix}drive-${q.type}`);
+        await shotOnce(`drive-${q.type}`);
         check(!(await evaluate(`document.documentElement.scrollWidth > innerWidth`)), `${prefix}drive ${q.type}: horizontal scroll`);
       }
       if (stopAtQuestion) return seen;
-      graded += 1;
-      const wrong = graded === 2;
+      let wrong = false;
+      if (item.kind === 'probe') {
+        probes += 1;
+        await shotOnce('drive-probe');
+        check(await evaluate(`!!document.querySelector('.btn-skip')`), 'drive: a probe has the skip button');
+        if (probes === 2 || (probes > 3 && probes % 2 === 1)) {
+          await evaluate(`document.querySelector('.btn-skip').click()`);
+          expectMeet = item.id;
+          await waitFor(`__app.item()?.key !== ${JSON.stringify(item.key)}`);
+          continue;
+        }
+        wrong = probes === 3;
+      } else {
+        check(await evaluate(`!document.querySelector('.btn-skip')`), `drive ${item.kind}: only probes have the skip button`);
+        if (!q.options) {
+          typed += 1;
+          wrong = typed === 2;
+        }
+      }
       if (q.options) {
         const id = wrong ? q.options.find((o) => o.id !== q.id).id : q.id;
         await evaluate(`document.querySelector('.opt[data-id=${JSON.stringify(id)}]').click()`);
@@ -202,13 +229,18 @@ async function playLeg({ prefix = '', stopAtQuestion = false } = {}) {
         await evaluate(`document.querySelector('.answer-form button').click()`);
       }
       check(await evaluate(`document.querySelector('.feedback').children.length > 0`), `drive ${q.type}: feedback shown`);
-      if (item.kind === 'know' && !wrong) {
-        check(await evaluate(`!document.querySelector('.chip-plus').hidden`), 'drive: +1 mile shown after a right "I know this"');
+      if (item.kind === 'confirm' && !wrong) {
+        check(await evaluate(`!document.querySelector('.chip-plus').hidden`), 'drive: +1 mile shown after a right confirm');
+        await shotOnce('drive-confirm');
       }
-      if (wrong && !wrongShot) {
-        wrongShot = true;
+      if (wrong && item.kind === 'probe') {
+        expectMeet = item.id;
+        check(await evaluate(`!!document.querySelector('.fb-wrong') && !document.querySelector('.minicard')`), 'drive: a wrong probe shows the answer without a mini card');
+        check(await evaluate(`document.querySelector('.btn-next').textContent.includes('เรียนคำนี้')`), 'drive: a wrong probe offers เรียนคำนี้');
+        await shotOnce('drive-probe-wrong');
+      } else if (wrong) {
         check(await evaluate(`!!document.querySelector('.fb-wrong') && !!document.querySelector('.minicard')`), 'drive: wrong feedback with mini card');
-        await shot(`${prefix}drive-wrong`);
+        await shotOnce('drive-wrong');
       }
       if (await evaluate(`!!document.querySelector('.btn-next')`)) await evaluate(`document.querySelector('.btn-next').click()`);
     }
@@ -239,6 +271,12 @@ try {
     check(await evaluate(`JSON.parse(localStorage.getItem('miles3000.v1')).settings.newPerDay === 15`), 'home: newPerDay saved');
     check(await evaluate(`document.querySelector('#plan-line').textContent.includes('คำใหม่ 15')`), 'home: plan line follows newPerDay');
     await evaluate(`(() => { const s = document.querySelector('#new-per-day'); s.value = '10'; s.dispatchEvent(new Event('change')); })()`);
+    // start level is saved, and changes the intro order
+    await evaluate(`(() => { const s = document.querySelector('#start-level'); s.value = 'B1'; s.dispatchEvent(new Event('change')); })()`);
+    check(await evaluate(`JSON.parse(localStorage.getItem('miles3000.v1')).settings.startLevel === 'B1'`), 'home: startLevel saved');
+    check(await evaluate(`document.querySelector('#start-level').value === 'B1'`), 'home: start level select keeps B1');
+    await evaluate(`(() => { const s = document.querySelector('#start-level'); s.value = 'A1'; s.dispatchEvent(new Event('change')); })()`);
+    check(await evaluate(`JSON.parse(localStorage.getItem('miles3000.v1')).settings.startLevel === 'A1'`), 'home: startLevel back to A1');
   }
 
   if (want('card')) {
@@ -258,7 +296,7 @@ try {
     await freshLoad();
     await setHash('#/drive');
     const seen = await playLeg();
-    check(seen.has('meaning') && seen.has('word'), `drive: day one shows meaning and word (saw ${[...seen]})`);
+    check(seen.has('meaning') && seen.has('spell') && !seen.has('word'), `drive: day one shows meaning and spell, not word (saw ${[...seen]})`);
     check(await evaluate(`location.hash === '#/results'`), 'drive: leg ends on results');
     const saved = JSON.parse(await evaluate(`localStorage.getItem(${JSON.stringify(KEY)})`));
     check(saved.leg === null && saved.lastLeg && Object.keys(saved.cards).length > 0, 'drive: cards and lastLeg saved, leg cleared');
@@ -289,18 +327,31 @@ try {
   if (want('resume')) {
     await freshLoad();
     await setHash('#/drive');
-    for (let i = 0; i < 2; i++) {
-      await waitFor(`!!__app.item()`);
-      const item = JSON.parse(await evaluate(`JSON.stringify(__app.item())`));
-      await evaluate(`document.querySelector('.wc-actions .btn-primary').click()`);
-      await waitFor(`__app.item()?.key !== ${JSON.stringify(item.key)}`);
-    }
+    // probe right, probe skip, reload: the leg continues at the same item
+    await waitFor(`!!__app.item()`);
+    let item = JSON.parse(await evaluate(`JSON.stringify({ item: __app.item(), q: __app.question() })`));
+    await evaluate(`document.querySelector('.opt[data-id=${JSON.stringify(item.q.id)}]').click()`);
+    await waitFor(`__app.item()?.key !== ${JSON.stringify(item.item.key)}`);
+    item = JSON.parse(await evaluate(`JSON.stringify({ item: __app.item() })`));
+    await evaluate(`document.querySelector('.btn-skip').click()`);
+    await waitFor(`__app.item()?.key !== ${JSON.stringify(item.item.key)}`);
+    check((await evaluate(`__app.item().kind`)) === 'meet', 'resume: the Meet card follows the skip');
     const before = await evaluate(`__app.item().key`);
     await evaluate(`location.reload()`).catch(() => {});
     await sleep(300);
     await waitFor(`!!document.querySelector('.screen') && !!__app.item()`);
     check((await evaluate(`__app.item().key`)) === before, 'resume: the leg continues at the same item');
     check(await evaluate(`JSON.parse(localStorage.getItem(${JSON.stringify(KEY)})).leg.queue.length > 0`), 'resume: saved leg');
+    // a saved leg without v: 2 is dropped and a new leg starts
+    await setHash('#/');
+    await evaluate(`(() => { const s = JSON.parse(localStorage.getItem(${JSON.stringify(KEY)})); delete s.leg.v; localStorage.setItem(${JSON.stringify(KEY)}, JSON.stringify(s)); })()`);
+    await evaluate(`location.reload()`).catch(() => {});
+    await sleep(300);
+    await waitFor(pageReady);
+    await setHash('#/drive');
+    await waitFor(`!!__app.item()`);
+    check(await evaluate(`JSON.parse(localStorage.getItem(${JSON.stringify(KEY)})).leg.v === 2`), 'resume: an old leg is replaced by a v2 leg');
+    check(await evaluate(`__app.item().kind === 'probe'`), 'resume: the new leg starts with a probe');
   }
 
   if (want('mobile')) {

@@ -2,8 +2,10 @@
 import { h, setChildren, th, en, thaiDay } from '../ui.js';
 import { countMiles } from '../srs.js';
 import { odometer } from '../components/odometer.js';
+import { introOrder } from '../plan.js';
 
 const PER_DAY = [5, 10, 15, 20, 30];
+const LEVELS = ['A1', 'A2', 'B1', 'B2'];
 
 export function render(root, app) {
   const { store } = app;
@@ -36,6 +38,17 @@ export function render(root, app) {
     render(root, app);
   });
 
+  // temporary: Step 10 moves both selects to settings
+  const levelSelect = h('select', { id: 'start-level', class: 'select' },
+    LEVELS.map((lv) => h('option', { value: lv, selected: lv === app.settings.startLevel },
+      `${lv} · ${app.words.filter((w) => w.lv === lv).length} คำ`)),
+  );
+  levelSelect.addEventListener('change', () => {
+    store.update((s) => { s.settings.startLevel = levelSelect.value; });
+    app.order = introOrder(app.words, levelSelect.value);
+    render(root, app);
+  });
+
   setChildren(
     root,
     h('header', { class: 'home-head' }, en('3000 Miles', { class: 'brand' }), th(thaiDay(today), { class: 'muted' })),
@@ -52,5 +65,6 @@ export function render(root, app) {
       ? h('p', { class: 'muted ready', id: 'ready' }, th('คำที่พร้อมเล่น '), en(`${ready}/${app.total}`))
       : null,
     h('label', { class: 'field', for: 'new-per-day' }, th('คำใหม่ต่อวัน'), select),
+    h('label', { class: 'field', for: 'start-level' }, th('เริ่มจากระดับ'), levelSelect),
   );
 }

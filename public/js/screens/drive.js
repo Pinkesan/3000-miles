@@ -4,13 +4,14 @@ import { icons } from '../icons.js';
 import { makeRng } from '../rng.js';
 import { POS_LABEL, blankGap, plain, posList } from '../text.js';
 import { makeQuestion, isCorrect } from '../quiz.js';
-import { buildLeg, legCurrent, legProgress, legReduce, recordAnswer, extraNewWord } from '../plan.js';
+import { buildLeg, legCurrent, legProgress, legReduce, recordAnswer } from '../plan.js';
 import { countMiles } from '../srs.js';
 import { queueIds } from '../summary.js';
 import * as sfx from '../sfx.js';
 import { wordCard, exampleLine } from '../components/wordcard.js';
 
 const CHEERS = ['ถูกต้อง', 'เยี่ยม', 'แม่นมาก'];
+const STAGE_TAG = { probe: 'คำใหม่ รู้จักไหม', confirm: 'เช็กว่ารู้จริง', reask: 'ลองอีกครั้ง' };
 const AUTO_TYPES = ['meaning', 'word', 'listen'];
 const posLabel = (w) => POS_LABEL[w.p]?.en ?? posList(w);
 const firstForm = (w) => w.w.split(', ')[0];
@@ -25,7 +26,8 @@ export function render(root, app) {
   let timer = 0;
   let cur = null;
 
-  let leg = store.state.leg?.day === today ? store.state.leg : null;
+  // a saved leg without v: 2 comes from an older version: drop it (its answers are saved already)
+  let leg = store.state.leg?.day === today && store.state.leg.v === 2 ? store.state.leg : null;
   if (!leg && store.state.leg) store.update((s) => { s.leg = null; });
   if (!leg) {
     const plan = app.ensurePlan();
@@ -103,14 +105,14 @@ export function render(root, app) {
   }
 
   function showMeet(word) {
-    const meet = (know) => {
-      leg = legReduce(leg, { type: 'meet', know });
+    const meet = () => {
+      leg = legReduce(leg, { type: 'meet' });
       store.update((s) => { s.leg = leg; });
       show();
     };
     setChildren(stage,
       h('p', { class: 'stage-tag' }, th('คำใหม่')),
-      wordCard(app, word, { onLearned: () => meet(false), onKnow: () => meet(true) }),
+      wordCard(app, word, { onLearned: meet }),
     );
     if (app.settings.autoplay) app.say(firstForm(word));
   }
@@ -149,9 +151,12 @@ export function render(root, app) {
           h('span', { class: 'opt-label', lang }, o.label)))));
     }
     cur.fb = h('div', { class: 'feedback', 'aria-live': 'polite' });
+    if (item.kind === 'probe') {
+      cur.skip = h('button', { class: 'btn btn-secondary btn-skip', type: 'button', onclick: skip }, th('ไม่รู้จักคำนี้'));
+    }
     setChildren(stage,
-      h('p', { class: 'stage-tag' }, th(item.kind === 'reask' ? 'ลองอีกครั้ง' : item.kind === 'know' ? 'เช็กว่ารู้จักจริง' : 'คำถาม')),
-      h('div', { class: `prompt prompt-${q.type}` }, prompt), control, cur.fb);
+      h('p', { class: 'stage-tag' }, th(STAGE_TAG[item.kind] ?? 'คำถาม')),
+      h('div', { class: `prompt prompt-${q.type}` }, prompt), control, cur.skip, cur.fb);
 
     if (q.type === 'listen') app.say(firstForm(word));
     else if (q.type === 'meaning' && app.settings.autoplay) app.say(firstForm(word));
@@ -172,20 +177,9 @@ export function render(root, app) {
     const { item, q } = cur;
     const correct = isCorrect(q, response);
     const res = recordAnswer({ cards: store.state.cards, plan: store.state.days[today], leg, today, item, correct });
-    let nextLeg = legReduce(res.leg, { type: 'answer', correct });
-    let nextPlan = res.plan;
-    if (item.kind === 'know' && correct) {
-      const more = extraNewWord({
-        plan: nextPlan, cards: res.cards, byId, order: app.order, leg: nextLeg,
-        rnd: app.rnd(`${today}:extra${nextPlan.shown.length}`),
-      });
-      if (more) {
-        nextPlan = more.plan;
-        nextLeg = { ...more.leg, ids: [...new Set([...nextLeg.ids, ...more.leg.queue.map((x) => x.id)])] };
-      }
-    }
-    leg = nextLeg;
-    store.update((s) => { s.cards = res.cards; s.days[today] = nextPlan; s.leg = leg; });
+    leg = legReduce(res.leg, { type: 'answer', correct });
+    store.update((s) => { s.cards = res.cards; s.days[today] = res.plan; s.leg = leg; });
+    if (cur.skip) cur.skip.disabled = true;
 
     if (res.mile) {
       sfx.mile();
@@ -197,6 +191,16 @@ export function render(root, app) {
 
     paintFeedback(correct, response);
     if (correct && AUTO_TYPES.includes(q.type)) timer = setTimeout(advance, 900);
+  }
+
+  // "ไม่รู้จักคำนี้": no answer is graded, the lesson comes at once
+  function skip() {
+    if (!cur || cur.answered || cur.item.kind !== 'probe') return;
+    cur.answered = true;
+    cur.advanced = true;
+    leg = legReduce(leg, { type: 'skip' });
+    store.update((s) => { s.leg = leg; });
+    show();
   }
 
   function paintFeedback(correct, response) {
@@ -228,11 +232,12 @@ export function render(root, app) {
         ? h('p', { class: 'fb-msg fb-right' }, h('span', { html: icons.check }), th(CHEERS[leg.done % CHEERS.length]))
         : h('p', { class: 'fb-msg fb-wrong' }, h('span', { html: icons.x }), th('ยังไม่ใช่ คำตอบคือ '), h('b', { lang: answerLang }, answerText)),
     ];
-    if (!correct) parts.push(miniCard(word));
+    const probe = cur.item.kind === 'probe';
+    if (!correct && !probe) parts.push(miniCard(word));
     else if (isGap) parts.push(h('p', { class: 'fb-sentence' }, exampleLine(word.ex)));
     else if (q.type === 'listen') parts.push(en(word.w, { class: 'fb-word' }));
     if (!(correct && AUTO_TYPES.includes(q.type))) {
-      parts.push(h('button', { class: 'btn btn-primary btn-next', type: 'button', onclick: advance }, th('ต่อไป')));
+      parts.push(h('button', { class: 'btn btn-primary btn-next', type: 'button', onclick: advance }, th(!correct && probe ? 'เรียนคำนี้' : 'ต่อไป')));
     }
     setChildren(cur.fb, parts);
 
@@ -268,7 +273,8 @@ export function render(root, app) {
     if (e.key === ' ') {
       const t = cur.q?.type;
       if (cur.item.kind === 'meet' || cur.answered || t === 'meaning' || t === 'listen') { e.preventDefault(); replay(); }
-    } else if (/^[1-4]$/.test(e.key) && cur.q?.options && !cur.answered) {
+    } else if (e.key === '0' && cur.skip && !cur.answered) skip();
+    else if (/^[1-4]$/.test(e.key) && cur.q?.options && !cur.answered) {
       const o = cur.q.options[Number(e.key) - 1];
       if (o) answer(o.id);
     }

@@ -8,6 +8,6 @@ export function render(root, app, { args }) {
   setChildren(
     root,
     h('a', { class: 'btn btn-quiet back', href: '#/' }, h('span', { html: icons.back }), th('กลับหน้าแรก')),
-    wordCard(app, word, { onLearned: () => {}, onKnow: () => {} }),
+    wordCard(app, word, { onLearned: () => {} }),
   );
 }

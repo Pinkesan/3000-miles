@@ -4,8 +4,9 @@ import { shuffle } from './rng.js';
 import { parseGap, glossOverlap, letterHint, acceptedSpellings, typedCorrect } from './text.js';
 
 const BY_BOX = {
-  0: ['meaning'],
-  know: ['word'],
+  probe: ['meaning'],
+  confirm: ['spell'],
+  check: ['spell'],
   1: ['meaning', 'listen'],
   2: ['word', 'listen'],
   3: ['gap', 'word'],
@@ -13,11 +14,11 @@ const BY_BOX = {
   5: ['spell', 'gapType'],
 };
 
-// box: 0 = check after the Meet card, 'know' = "I know this", 1..8 = the card's box.
+// box: 'probe' | 'confirm' | 'check' (a new word's items) or 1..8 = the card's box.
 export function allowedTypes(box, word, { canListen = true } = {}) {
   const hasGap = !!word.ex;
   if (word.gapOnly && hasGap) {
-    return box === 0 || box === 'know' || box <= 3 ? ['gap'] : ['gapType'];
+    return box === 'probe' || box <= 3 ? ['gap'] : ['gapType'];
   }
   const row = typeof box === 'number' && box >= 5 ? BY_BOX[5] : BY_BOX[box] || BY_BOX[1];
   const ok = row.filter((t) => (t === 'listen' ? canListen : t.startsWith('gap') ? hasGap : true));

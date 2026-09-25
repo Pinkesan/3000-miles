@@ -209,8 +209,9 @@ test('text: POS labels', () => {
 test('quiz: allowedTypes follows the table in DESIGN §4', () => {
   const w = WORDS[0];
   const t = (box, caps = CAPS) => quiz.allowedTypes(box, w, caps);
-  assert.deepEqual(t(0), ['meaning']);
-  assert.deepEqual(t('know'), ['word']);
+  assert.deepEqual(t('probe'), ['meaning']);
+  assert.deepEqual(t('confirm'), ['spell']);
+  assert.deepEqual(t('check'), ['spell']);
   assert.deepEqual(t(1), ['meaning', 'listen']);
   assert.deepEqual(t(2), ['word', 'listen']);
   assert.deepEqual(t(3), ['gap', 'word']);
@@ -230,8 +231,8 @@ test('quiz: listen is dropped without a voice, gap without an example', () => {
 
 test('quiz: gapOnly words are asked as gap, then gapType', () => {
   const w = { ...WORDS[0], gapOnly: true };
-  for (const box of [0, 'know', 1, 2, 3]) assert.deepEqual(quiz.allowedTypes(box, w, CAPS), ['gap']);
-  for (const box of [4, 5, 8]) assert.deepEqual(quiz.allowedTypes(box, w, CAPS), ['gapType']);
+  for (const box of ['probe', 1, 2, 3]) assert.deepEqual(quiz.allowedTypes(box, w, CAPS), ['gap']);
+  for (const box of ['confirm', 'check', 4, 5, 8]) assert.deepEqual(quiz.allowedTypes(box, w, CAPS), ['gapType']);
 });
 
 test('quiz: chooseType picks an allowed type, deterministically', () => {
@@ -355,20 +356,18 @@ function reviewFixture(nDue, newPerDay = 10) {
   return { cards, byId, order, p, all };
 }
 
-test('plan: leg order is R R N R R N and each check comes 3 items after its meet', () => {
+test('plan: leg order is R R P R R P, probes only, no checks at build time', () => {
   const f = reviewFixture(6, 3);
   const { leg, plan: p2 } = plan.buildLeg({
     plan: f.p, cards: f.cards, byId: f.byId, order: f.order, today: TODAY, rnd: makeRng(1), caps: CAPS,
   });
   const kinds = leg.queue.map((x) => x.kind);
-  assert.deepEqual(kinds.slice(0, 6), ['review', 'review', 'meet', 'review', 'review', 'meet']);
-  assert.equal(leg.queue.length, 6 + 3 * 2);
-  for (const id of ['n0', 'n1', 'n2']) {
-    const m = leg.queue.findIndex((x) => x.kind === 'meet' && x.id === id);
-    const c = leg.queue.findIndex((x) => x.kind === 'check' && x.id === id);
-    assert.ok(c === m + 4 || c === leg.queue.length - 1, `check of ${id} at ${c}, meet at ${m}`);
-    assert.ok(c > m);
-  }
+  assert.deepEqual(kinds.slice(0, 6), ['review', 'review', 'probe', 'review', 'review', 'probe']);
+  assert.equal(leg.queue.length, 6 + 3);
+  assert.ok(!kinds.includes('meet') && !kinds.includes('check'));
+  assert.equal(leg.v, 2);
+  const probe = leg.queue.find((x) => x.kind === 'probe');
+  assert.deepEqual([probe.type, probe.confirmType, probe.checkType], ['meaning', 'spell', 'spell']);
   assert.equal(leg.newCount, 3);
   assert.deepEqual(p2.shown, ['n0', 'n1', 'n2']);
   assert.equal(p2.legs, 1);
@@ -383,7 +382,7 @@ test('plan: a leg has at most 20 items with 14 reviews first, and skips words gr
     plan: f.p, cards: f.cards, byId: f.byId, order: f.order, today: TODAY, rnd: makeRng(1), caps: CAPS,
   });
   const reviews = leg.queue.filter((x) => x.kind === 'review');
-  const metas = leg.queue.filter((x) => x.kind === 'meet');
+  const metas = leg.queue.filter((x) => x.kind === 'probe');
   assert.equal(reviews.length, 14);
   assert.ok(!reviews.some((x) => x.id === 'r0'));
   assert.equal(metas.length, 6);
@@ -400,20 +399,29 @@ test('plan: the leg picks the first new words in intro order and never repeats s
   assert.deepEqual(plan.nextNew(f.order, withCard, first.plan, 1), ['n6']);
 });
 
-test('plan: an extra leg takes new words only, up to 20, and respects DAY_NEW_CAP', () => {
+test('plan: an extra leg takes 10 new words only and respects DAY_NEW_CAP', () => {
   const f = reviewFixture(3, 5);
   const done = { ...f.p, taught: 5, shown: f.order.slice(0, 5) };
   const { leg, plan: p2 } = plan.buildLeg({
     plan: done, cards: f.cards, byId: f.byId, order: f.order, today: TODAY, rnd: makeRng(1), caps: CAPS, extra: true,
   });
-  assert.ok(leg.queue.every((x) => x.kind === 'meet' || x.kind === 'check'));
-  assert.equal(leg.newCount, 20);
-  assert.equal(p2.shown.length, 25);
+  assert.ok(leg.queue.every((x) => x.kind === 'probe'));
+  assert.equal(leg.newCount, plan.EXTRA_NEW);
+  assert.equal(p2.shown.length, 15);
   const nearCap = { ...f.p, taught: 5, shown: Array.from({ length: 95 }, (_, i) => `old${i}`) };
   const capped = plan.buildLeg({
     plan: nearCap, cards: f.cards, byId: f.byId, order: f.order, today: TODAY, rnd: makeRng(1), caps: CAPS, extra: true,
   });
   assert.equal(capped.leg.newCount, 5);
+});
+
+test('plan: known words count toward newTarget and stop new words', () => {
+  const f = reviewFixture(0, 5);
+  const p = { ...f.p, taught: 2, known: 3 };
+  const none = plan.buildLeg({ plan: p, cards: f.cards, byId: f.byId, order: f.order, today: TODAY, rnd: makeRng(1), caps: CAPS });
+  assert.equal(none.leg.queue.length, 0);
+  const some = plan.buildLeg({ plan: { ...p, known: 1 }, cards: f.cards, byId: f.byId, order: f.order, today: TODAY, rnd: makeRng(1), caps: CAPS });
+  assert.equal(some.leg.newCount, 2);
 });
 
 test('plan: no new words when the target is reached in a normal leg', () => {
@@ -431,11 +439,12 @@ function twoWordLeg() {
 
 test('plan: legCurrent and legProgress', () => {
   const { leg } = twoWordLeg();
-  assert.equal(plan.legCurrent(leg).kind, 'meet');
+  assert.equal(plan.legCurrent(leg).kind, 'probe');
   assert.equal(plan.legProgress(leg), 0);
-  const r = plan.legReduce(leg, { type: 'meet', know: false });
-  assert.equal(r.queue.length, leg.queue.length - 1);
-  assert.equal(leg.queue.length, 4, 'input untouched');
+  const r = plan.legReduce({ ...leg, queue: [{ kind: 'meet', id: 'n0' }, ...leg.queue] }, { type: 'meet' });
+  assert.equal(r.queue.length, leg.queue.length);
+  assert.equal(r.done, 0);
+  assert.equal(leg.queue.length, 2, 'input untouched');
   assert.equal(plan.legCurrent({ ...leg, queue: [] }), null);
   assert.equal(plan.legProgress({ done: 3, queue: [1, 2, 3, 4, 5, 6, 7] }), 0.3);
 });
@@ -468,55 +477,88 @@ test('plan: a re-ask with fewer than 3 items left goes last', () => {
   assert.deepEqual(leg.queue.map((x) => x.id), ['b', 'a']);
 });
 
-test('plan: "I know this" right path: check dropped, know item first, extra new word', () => {
+const filler = (n) => Array.from({ length: n }, (_, i) => ({ key: `f${i}`, id: `f${i}`, kind: 'review', type: 'word' }));
+const probeItem = { key: 'probe-n0', id: 'n0', kind: 'probe', type: 'meaning', confirmType: 'spell', checkType: 'spell' };
+const legOf = (queue) => ({ queue, done: 0, reasks: {}, newCount: 0, stats: {} });
+
+test('plan: a right probe puts its confirm 6 items later, or last in a short queue', () => {
+  const long = plan.legReduce(legOf([probeItem, ...filler(9)]), { type: 'answer', correct: true });
+  assert.equal(long.queue.findIndex((x) => x.kind === 'confirm'), plan.CONFIRM_GAP);
+  assert.equal(long.queue[plan.CONFIRM_GAP].type, 'spell');
+  assert.equal(long.done, 1);
+  const short = plan.legReduce(legOf([probeItem, ...filler(2)]), { type: 'answer', correct: true });
+  assert.equal(short.queue.at(-1).kind, 'confirm');
+  assert.ok(!short.queue.some((x) => x.kind === 'meet'));
+});
+
+test('plan: a wrong probe and a skip put the meet first and the check 4 items after it', () => {
+  for (const event of [{ type: 'answer', correct: false }, { type: 'skip' }]) {
+    const leg = plan.legReduce(legOf([probeItem, ...filler(9)]), event);
+    assert.equal(leg.queue[0].kind, 'meet');
+    assert.equal(leg.queue[0].id, 'n0');
+    assert.equal(leg.queue.findIndex((x) => x.kind === 'check'), 1 + plan.CHECK_GAP);
+    assert.equal(leg.done, 1);
+    assert.ok(!leg.queue.some((x) => x.kind === 'reask'), 'a probe is never re-asked');
+    assert.deepEqual(leg.reasks, {});
+    const short = plan.legReduce(legOf([probeItem, ...filler(1)]), event);
+    assert.equal(short.queue.at(-1).kind, 'check');
+    // dropping the meet leaves the check 4 items away
+    const dropped = plan.legReduce(leg, { type: 'meet' });
+    assert.equal(dropped.queue.findIndex((x) => x.kind === 'check'), plan.CHECK_GAP);
+    assert.equal(dropped.done, 1);
+  }
+});
+
+test('plan: skip only works on a probe', () => {
+  const leg = legOf(filler(3));
+  assert.equal(plan.legReduce(leg, { type: 'skip' }), leg);
+});
+
+test('plan: right confirm is a mile and a known word', () => {
   const f = twoWordLeg();
-  let leg = plan.legReduce(f.leg, { type: 'meet', know: true });
-  assert.equal(leg.queue[0].kind, 'know');
-  assert.equal(leg.queue[0].type, 'word');
-  assert.ok(!leg.queue.some((x) => x.kind === 'check' && x.id === 'n0'));
-  assert.ok(leg.queue.some((x) => x.kind === 'check' && x.id === 'n1'));
-  const item = plan.legCurrent(leg);
-  const rec = plan.recordAnswer({ cards: f.cards, plan: f.plan, leg, today: TODAY, item, correct: true });
+  const item = { key: 'confirm-n0', id: 'n0', kind: 'confirm', type: 'spell' };
+  const rec = plan.recordAnswer({ cards: f.cards, plan: f.plan, leg: f.leg, today: TODAY, item, correct: true });
   assert.equal(rec.graded, true);
   assert.equal(rec.mile, 1);
   assert.equal(rec.cards.n0.m, 1);
   assert.equal(rec.cards.n0.k, 1);
-  assert.equal(rec.plan.known, 1);
-  assert.equal(rec.plan.miles, 1);
-  assert.equal(rec.leg.stats.known, 1);
-  assert.equal(rec.leg.stats.miles, 1);
-  assert.equal(rec.plan.done, 0);
-  leg = plan.legReduce(rec.leg, { type: 'answer', correct: true });
-  assert.equal(plan.needsExtraNew(rec.plan, leg), true);
-  const extra = plan.extraNewWord({ plan: rec.plan, cards: rec.cards, byId: f.byId, order: f.order, leg, rnd: makeRng(2) });
-  assert.deepEqual(extra.plan.shown, ['n0', 'n1', 'n2']);
-  assert.deepEqual(extra.leg.queue.slice(-2).map((x) => x.kind), ['meet', 'check']);
-  assert.equal(extra.leg.newCount, 3);
+  assert.equal(rec.cards.n0.b, 3);
+  assert.deepEqual([rec.plan.known, rec.plan.taught, rec.plan.miles, rec.plan.right, rec.plan.done], [1, 0, 1, 1, 1]);
+  assert.deepEqual([rec.leg.stats.known, rec.leg.stats.miles], [1, 1]);
 });
 
-test('plan: "I know this" wrong path: meet again, then a check 3 items later', () => {
+test('plan: wrong confirm is a taught word in box 1, then a re-ask', () => {
   const f = twoWordLeg();
-  let leg = plan.legReduce(f.leg, { type: 'meet', know: true });
-  const rec = plan.recordAnswer({ cards: f.cards, plan: f.plan, leg, today: TODAY, item: plan.legCurrent(leg), correct: false });
-  assert.equal(rec.graded, false);
-  assert.equal(rec.cards, f.cards);
-  assert.equal(rec.plan.wrong, 0);
-  leg = plan.legReduce(rec.leg, { type: 'answer', correct: false });
-  assert.equal(leg.queue[0].kind, 'meet');
-  assert.equal(leg.queue[0].id, 'n0');
-  const c = leg.queue.findIndex((x) => x.kind === 'check' && x.id === 'n0');
-  assert.ok(c === 4 || c === leg.queue.length - 1);
+  const item = { key: 'confirm-n0', id: 'n0', kind: 'confirm', type: 'spell' };
+  const leg = { ...legOf([item, ...filler(5)]), stats: f.leg.stats };
+  const rec = plan.recordAnswer({ cards: f.cards, plan: f.plan, leg, today: TODAY, item, correct: false });
+  assert.equal(rec.mile, null);
+  assert.deepEqual(rec.cards.n0, srs.teachCard(TODAY, false));
+  assert.deepEqual([rec.plan.taught, rec.plan.known, rec.plan.wrong, rec.plan.done], [1, 0, 1, 1]);
+  const next = plan.legReduce(leg, { type: 'answer', correct: false });
+  assert.equal(next.queue[plan.REASK_GAP].kind, 'reask');
+  const again = plan.recordAnswer({ cards: rec.cards, plan: rec.plan, leg: rec.leg, today: TODAY, item: { ...item, kind: 'reask' }, correct: true });
+  assert.equal(again.cards, rec.cards);
 });
 
-test('plan: gapOnly words get a gap know question', () => {
+test('plan: a probe answer changes no card, but counts right / wrong', () => {
+  const f = twoWordLeg();
+  const right = plan.recordAnswer({ cards: f.cards, plan: f.plan, leg: f.leg, today: TODAY, item: probeItem, correct: true });
+  assert.equal(right.cards, f.cards);
+  assert.equal(right.graded, false);
+  assert.deepEqual([right.plan.right, right.plan.wrong, right.plan.done, right.leg.stats.right], [1, 0, 0, 1]);
+  const wrong = plan.recordAnswer({ cards: f.cards, plan: f.plan, leg: f.leg, today: TODAY, item: probeItem, correct: false });
+  assert.equal(wrong.cards, f.cards);
+  assert.deepEqual([wrong.plan.wrong, wrong.leg.stats.wrong], [1, 1]);
+  assert.equal(f.plan.right, 0, 'input plan untouched');
+});
+
+test('plan: gapOnly words get gap, then gapType', () => {
   const words = [{ ...WORDS[0], id: 'the', w: 'the', gapOnly: true }];
   const byId = { the: words[0] };
   const p = plan.makeDayPlan({}, TODAY, { newPerDay: 1 });
   const { leg } = plan.buildLeg({ plan: p, cards: {}, byId, order: ['the'], today: TODAY, rnd: makeRng(1), caps: CAPS });
-  assert.equal(leg.queue[1].type, 'gap');
-  const know = plan.legReduce(leg, { type: 'meet', know: true });
-  assert.equal(know.queue[0].type, 'gap');
-  assert.equal(know.queue.length, 1);
+  assert.deepEqual([leg.queue[0].type, leg.queue[0].confirmType, leg.queue[0].checkType], ['gap', 'gapType', 'gapType']);
 });
 
 test('plan: recordAnswer for a taught word (check) sets the card and counts done', () => {
@@ -580,17 +622,24 @@ test('plan: a review not in plan.due does not add to done', () => {
   assert.equal(r.plan.done, 0);
 });
 
-test('plan: needsExtraNew respects the target, pending checks and the caps', () => {
-  const p = { newTarget: 3, taught: 1, shown: ['a', 'b'] };
-  const leg = (n, newCount = 0) => ({
-    newCount, queue: Array.from({ length: n }, (_, i) => ({ kind: 'check', id: `c${i}` })),
-  });
-  assert.equal(plan.needsExtraNew(p, leg(1)), true);
-  assert.equal(plan.needsExtraNew(p, leg(2)), false);
-  assert.equal(plan.needsExtraNew(p, leg(0, 40)), false);
-  assert.equal(plan.needsExtraNew({ ...p, shown: new Array(100).fill('x') }, leg(0)), false);
-  assert.equal(plan.needsExtraNew({ ...p, newTarget: 0 }, leg(0)), false);
-});
+// Plays a leg: even-numbered new words are known (probe right), odd ones are not (probe wrong).
+function playLeg(leg, cards, p) {
+  let mileEvents = 0;
+  while (plan.legCurrent(leg)) {
+    const item = plan.legCurrent(leg);
+    if (item.kind === 'meet') {
+      leg = plan.legReduce(leg, { type: 'meet' });
+      continue;
+    }
+    const correct = item.kind !== 'probe' || Number(item.id.slice(1)) % 2 === 0;
+    const rec = plan.recordAnswer({ cards, plan: p, leg, today: TODAY, item, correct });
+    cards = rec.cards;
+    p = rec.plan;
+    mileEvents += rec.mile ? 1 : 0;
+    leg = plan.legReduce(rec.leg, { type: 'answer', correct });
+  }
+  return { cards, p, mileEvents };
+}
 
 test('plan: a whole day of legs reaches a full tank and never asks a word twice in the plan', () => {
   const f = reviewFixture(0, 10);
@@ -598,26 +647,19 @@ test('plan: a whole day of legs reaches a full tank and never asks a word twice 
   let p = f.p;
   let mileEvents = 0;
   for (let n = 0; n < 2; n++) {
-    let built = plan.buildLeg({ plan: p, cards, byId: f.byId, order: f.order, today: TODAY, rnd: makeRng(n), caps: CAPS });
-    let leg = built.leg;
-    p = built.plan;
-    while (plan.legCurrent(leg)) {
-      const item = plan.legCurrent(leg);
-      if (item.kind === 'meet') {
-        leg = plan.legReduce(leg, { type: 'meet', know: false });
-        continue;
-      }
-      const rec = plan.recordAnswer({ cards, plan: p, leg, today: TODAY, item, correct: true });
-      cards = rec.cards;
-      p = rec.plan;
-      mileEvents += rec.mile ? 1 : 0;
-      leg = plan.legReduce(rec.leg, { type: 'answer', correct: true });
-    }
+    const built = plan.buildLeg({ plan: p, cards, byId: f.byId, order: f.order, today: TODAY, rnd: makeRng(n), caps: CAPS });
+    const played = playLeg(built.leg, cards, built.plan);
+    cards = played.cards;
+    p = played.p;
+    mileEvents += played.mileEvents;
   }
-  assert.equal(p.taught, 10);
+  assert.equal(p.taught, 5);
+  assert.equal(p.known, 5);
   assert.equal(progress.tank(p), 1);
   assert.equal(Object.keys(cards).length, 10);
-  assert.equal(mileEvents, 0);
+  assert.equal(mileEvents, 5);
+  assert.equal(p.legs, 2);
+  assert.equal(p.shown.length, 10, 'the second leg found nothing left to teach');
 });
 
 test('plan: smoke test of a whole leg on the real words.json', () => {
@@ -633,16 +675,19 @@ test('plan: smoke test of a whole leg on the real words.json', () => {
   p = built.plan;
   assert.equal(leg.newCount, 10);
   let guard = 0;
+  let n = 0;
   while (plan.legCurrent(leg) && guard++ < 200) {
     const item = plan.legCurrent(leg);
     if (item.kind === 'meet') {
-      leg = plan.legReduce(leg, { type: 'meet', know: false });
+      leg = plan.legReduce(leg, { type: 'meet' });
       continue;
     }
     const word = byId.get(item.id);
-    const q = quiz.makeQuestion(word, item.type === 'listen' ? 'listen' : item.type, words, rnd);
-    const correct = quiz.isCorrect(q, q.options ? item.id : q.accept[0]);
-    assert.equal(correct, true);
+    const q = quiz.makeQuestion(word, item.type, words, rnd);
+    const wantRight = item.kind !== 'probe' || n++ % 2 === 0;
+    const response = wantRight ? (q.options ? item.id : q.accept[0]) : 'zzz';
+    const correct = quiz.isCorrect(q, response);
+    assert.equal(correct, wantRight);
     const rec = plan.recordAnswer({ cards, plan: p, leg, today: TODAY, item, correct });
     cards = rec.cards;
     p = rec.plan;
@@ -650,7 +695,8 @@ test('plan: smoke test of a whole leg on the real words.json', () => {
   }
   assert.equal(plan.legCurrent(leg), null);
   assert.equal(Object.keys(cards).length, 10);
-  assert.equal(p.taught, 10);
+  assert.equal(p.taught + p.known, 10);
+  assert.equal(p.known, 5);
 });
 
 // ---- progress ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { legSummary, tankFill, tankText, queueIds } from '../public/js/summary.js';
+import { legSummary, tankFill, tankText, queueIds, levelTip } from '../public/js/summary.js';
 
 test('legSummary: percent of graded answers and miles gained', () => {
   const s = legSummary({ stats: { right: 7, wrong: 3, taught: 4, known: 1, reviewed: 5, miles: 2 }, startMiles: 10, endMiles: 12 });
@@ -28,4 +28,15 @@ test('tankFill and tankText', () => {
 
 test('queueIds keeps order and drops repeats', () => {
   assert.deepEqual(queueIds([{ id: 'a' }, { id: 'b' }, { id: 'a' }]), ['a', 'b']);
+});
+
+test('levelTip: needs 5 resolved words, 80% known, and a level below B2', () => {
+  const tip = (known, taught, lv = 'A1') => levelTip({ known, taught }, lv);
+  assert.equal(tip(4, 0), null, 'only 4 words');
+  assert.deepEqual(tip(5, 0), { known: 5, total: 5 });
+  assert.deepEqual(tip(8, 2), { known: 8, total: 10 });
+  assert.equal(tip(79, 21), null, '79%');
+  assert.deepEqual(tip(80, 20), { known: 80, total: 100 });
+  assert.equal(tip(9, 1, 'B2'), null);
+  assert.deepEqual(tip(9, 1, 'B1'), { known: 9, total: 10 });
 });
