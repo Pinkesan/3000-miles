@@ -39,6 +39,11 @@ export function reachedStops(route, before, after) {
   return stopsOf(route).filter((s) => s.at > before && s.at <= after);
 }
 
+// Stops (not New York) that `miles` has reached but `unlocked` ({ id: day }) doesn't list yet.
+export function newlyReached(route, miles, unlocked) {
+  return stopsOf(route).filter((s) => s.at > 0 && s.at <= miles && unlocked[s.id] == null);
+}
+
 // Card ids whose mile falls in (previous stop's at, this stop's at], sorted by mile.
 export function stopWords(cards, route, stopId) {
   const stops = stopsOf(route);

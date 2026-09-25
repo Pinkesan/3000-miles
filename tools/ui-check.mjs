@@ -1,7 +1,7 @@
 // UI smoke test: drives headless Chrome through the app, saves screenshots to .shots/ and
 // reports JS errors. Starts its own server (port 0), so the game server on 5320 is left alone.
 //   npm run ui
-//   ONLY=home,card npm run ui   (scenes: home card drive types synonym score arcade resume done mobile dark light)   (Git Bash)   PowerShell: $env:ONLY='home'; npm run ui
+//   ONLY=home,card npm run ui   (scenes: home card drive types synonym score arcade map postcard arrive streak resume done mobile dark light)   (Git Bash)   PowerShell: $env:ONLY='home'; npm run ui
 // Option: CHROME=path/to/chrome.exe
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -187,6 +187,21 @@ const rushAnswer = async (right, { last = false } = {}) => {
   await evaluate(`document.querySelector('.opt[data-id=${JSON.stringify(id)}]').click()`);
   if (!last) await waitFor(`__app.question()?.id !== ${JSON.stringify(q.id)}`);
 };
+
+const route = JSON.parse(readFileSync(path.join(ROOT, 'public/data/route.json'), 'utf8'));
+// n words with a mile each, not due (the map and the postcards)
+const milesCards = (n) => Object.fromEntries(words.slice(0, n).map((w, i) =>
+  [w.id, { b: 3, d: 20510, g: 20499, n: 3, r: 3, l: 0, m: i + 1, md: 20495 }]));
+// a plan whose only work is one due review
+const onePlan = (id) => ({ 20500: { day: 20500, due: [id], dueTotal: 1, newTarget: 0, goal: 1, done: 0, taught: 0, known: 0,
+  right: 0, wrong: 0, miles: 0, legs: 0, shown: [], score: 0 } });
+// miles = min(600, words with content), the stops up to there unlocked
+const TRIP = Math.min(600, words.length);
+const tripState = () => ({
+  cards: milesCards(TRIP),
+  stops: Object.fromEntries(route.stops.filter((s) => s.at > 0 && s.at <= TRIP).map((s) => [s.id, 20495])),
+});
+const noScroll = () => evaluate(`document.documentElement.scrollWidth <= innerWidth`);
 
 const fakeLastLeg = () => ({
   day: 20500, stats: { right: 8, wrong: 2, taught: 4, known: 1, reviewed: 5, miles: 2 }, startMiles: 10, endMiles: 12,
@@ -484,6 +499,76 @@ try {
     await viewport(1366, 768);
   }
 
+  if (want('map')) {
+    await loadWith(tripState());
+    const nextStop = route.stops.find((s) => s.at > TRIP);
+    check(await evaluate(`document.querySelector('#next-stop').textContent.includes(${JSON.stringify(nextStop.city)}) && document.querySelector('#next-stop').textContent.includes('${nextStop.at - TRIP} miles to go')`), 'map: home shows the next stop and the miles to go');
+    check(await evaluate(`!!document.querySelector('.gauge svg') && !!document.querySelector('#streak-line') && !!document.querySelector('#map-link')`), 'map: home has the gauge, streak and map link');
+    await setHash('#/map');
+    check(await evaluate(`document.querySelectorAll('.map-row').length === 16`), 'map: 16 stops');
+    check(await evaluate(`!!document.querySelector('#tile-new-york') && !!document.querySelector('#tile-cleveland') && !document.querySelector('#tile-chicago')`), 'map: reached stops are tiles, later ones are not');
+    check(await evaluate(`document.querySelector('#map-next').textContent.includes(${JSON.stringify(nextStop.city)})`), 'map: the next stop has a guide sign');
+    await sleep(1200);
+    check(await evaluate(`(() => { const r = document.querySelector('#map-car').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; })()`), 'map: the car is scrolled into view');
+    check(await noScroll(), 'map: horizontal scroll');
+    await shot('map');
+    await evaluate(`document.querySelector('#tile-cleveland').click()`);
+    await waitFor(`location.hash === '#/postcard/cleveland'`);
+  }
+
+  if (want('postcard')) {
+    await loadWith({ cards: milesCards(95), stops: { philadelphia: 20495 } });
+    await setHash('#/postcard/philadelphia');
+    check(await evaluate(`document.querySelector('#postcard-front').textContent.includes('Greetings from') && document.querySelector('#postcard-front').textContent.includes('Philadelphia')`), 'postcard: front says Greetings from Philadelphia');
+    check(await evaluate(`document.querySelectorAll('#pc-words li').length === 12`), 'postcard: 12 words listed');
+    check(await evaluate(`document.querySelector('#postcard-back').textContent.includes('(90 คำ)')`), 'postcard: the word count is shown');
+    await sleep(400);
+    await shot('postcard');
+    await setHash('#/postcard/washington');
+    check(await evaluate(`location.hash === '#/map'`), 'postcard: a locked stop goes to the map');
+    await setHash('#/postcard/new-york');
+    check(await evaluate(`document.querySelector('#postcard-front').textContent.includes('New York') && document.querySelector('#postcard-back').textContent.includes('JFK')`), 'postcard: New York is always open, with a welcome');
+    await shot('postcard-new-york');
+  }
+
+  if (want('arrive')) {
+    // mile 89 done; one due review in box 2: its right answer is mile 90, Philadelphia
+    const due = words[89];
+    await loadWith({ cards: { ...milesCards(89), [due.id]: { b: 2, d: 20500, g: 20490, n: 3, r: 3, l: 0 } }, days: onePlan(due.id) });
+    await setHash('#/drive');
+    await playLeg();
+    await waitFor(`!!document.querySelector('#stop-philadelphia')`);
+    check(await evaluate(`document.querySelector('#stop-philadelphia').textContent.includes('Philadelphia')`), 'arrive: results show the Philadelphia postcard button');
+    check(await evaluate(`JSON.parse(localStorage.getItem(${JSON.stringify(KEY)})).stops.philadelphia === 20500`), 'arrive: the postcard is unlocked and saved');
+    await sleep(1400);
+    check(await evaluate(`document.querySelector('.odometer').getAttribute('aria-label') === '90 ไมล์' && document.querySelectorAll('.wheel')[3].style.getPropertyValue('--d') === '0'`), 'arrive: the odometer rolled to 90');
+    await shot('arrive');
+    await evaluate(`location.reload()`).catch(() => {});
+    await sleep(300);
+    await waitFor(pageReady);
+    check(await evaluate(`!!document.querySelector('#stop-philadelphia')`), 'arrive: the postcard button is still there after a reload');
+    await evaluate(`document.querySelector('#stop-philadelphia').click()`);
+    await waitFor(`location.hash === '#/postcard/philadelphia'`);
+  }
+
+  if (want('streak')) {
+    // day 7 of a streak: the tank fills, home shows 7 days and 2 P signs
+    const due = words[0];
+    await loadWith({
+      cards: { [due.id]: { b: 2, d: 20500, g: 20490, n: 3, r: 3, l: 0 } }, days: onePlan(due.id),
+      streak: { cur: 6, best: 9, last: 20499, rests: 1 },
+    });
+    await setHash('#/drive');
+    await playLeg();
+    await waitFor(`!!document.querySelector('.toast')`);
+    check(await evaluate(`document.querySelector('.toast').textContent.includes('เติมน้ำมันเต็มถังแล้ว')`), 'streak: the full tank toast');
+    const streak = JSON.parse(await evaluate(`JSON.stringify(JSON.parse(localStorage.getItem(${JSON.stringify(KEY)})).streak)`));
+    check(streak.cur === 7 && streak.best === 9 && streak.last === 20500 && streak.rests === 2, `streak: 7 days, 2 rests (${JSON.stringify(streak)})`);
+    await setHash('#/');
+    check(await evaluate(`document.querySelector('#streak-line').textContent.includes('7 วัน') && document.querySelectorAll('#rests .p-sign').length === 2`), 'streak: home shows 7 days and 2 P signs');
+    await shot('streak');
+  }
+
   if (want('resume')) {
     await freshLoad();
     await setHash('#/drive');
@@ -560,7 +645,18 @@ try {
     await startRush();
     await rushAnswer(true);
     await shot('mobile-arcade');
+    await loadWith(tripState());
+    for (const [name, hash] of [['home-trip', '#/'], ['map', '#/map'], ['postcard', '#/postcard/cleveland']]) {
+      await setHash(hash);
+      await sleep(900);
+      await shot(`mobile-${name}`);
+      check(await noScroll(), `mobile ${name}: horizontal scroll`);
+    }
     await viewport(360, 740, true);
+    for (const hash of ['#/', '#/map', '#/postcard/cleveland']) {
+      await setHash(hash);
+      check(await noScroll(), `mobile 360px ${hash}: horizontal scroll`);
+    }
     check(!(await evaluate(`document.documentElement.scrollWidth > innerWidth`)), 'mobile 360px: horizontal scroll');
     await viewport(1366, 768);
   }
@@ -583,6 +679,12 @@ try {
     await startRush();
     await rushAnswer(true);
     await shot('dark-arcade');
+    await loadWith(tripState());
+    for (const [name, hash] of [['home-trip', '#/'], ['map', '#/map'], ['postcard', '#/postcard/cleveland']]) {
+      await setHash(hash);
+      await sleep(900);
+      await shot(`dark-${name}`);
+    }
     await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] });
     await viewport(1366, 768);
   }

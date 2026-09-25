@@ -1,0 +1,21 @@
+{
+ "total": 3000,
+ "stops": [
+  { "id": "new-york", "at": 0, "city": "New York", "state": "NY", "fact": "Your road trip starts here. More than eight million people live in New York City.", "factTh": "ทริปของคุณเริ่มที่นี่ นิวยอร์กมีคนอาศัยอยู่มากกว่าแปดล้านคน", "color": "sign" },
+  { "id": "philadelphia", "at": 90, "city": "Philadelphia", "state": "PA", "fact": "The Liberty Bell is in this city. It has a famous crack.", "factTh": "ระฆังแห่งเสรีภาพอยู่ในเมืองนี้ และมีรอยร้าวที่มีชื่อเสียง", "color": "sunset" },
+  { "id": "washington", "at": 215, "city": "Washington", "state": "DC", "fact": "The President lives and works in the White House here.", "factTh": "ประธานาธิบดีอาศัยและทำงานที่ทำเนียบขาวในเมืองนี้", "color": "sky" },
+  { "id": "pittsburgh", "at": 440, "city": "Pittsburgh", "state": "PA", "fact": "Pittsburgh has more than 400 bridges.", "factTh": "พิตต์สเบิร์กมีสะพานมากกว่า 400 แห่ง", "color": "desert" },
+  { "id": "cleveland", "at": 565, "city": "Cleveland", "state": "OH", "fact": "Cleveland is on Lake Erie. It has a big museum of rock and roll.", "factTh": "คลีฟแลนด์อยู่ริมทะเลสาบอีรี และมีพิพิธภัณฑ์ดนตรีร็อกแอนด์โรลขนาดใหญ่", "color": "sign" },
+  { "id": "chicago", "at": 880, "city": "Chicago", "state": "IL", "fact": "Route 66 starts here. Chicago is on Lake Michigan.", "factTh": "ถนนสาย 66 เริ่มต้นที่นี่ ชิคาโกอยู่ริมทะเลสาบมิชิแกน", "color": "sunset" },
+  { "id": "st-louis", "at": 1155, "city": "St. Louis", "state": "MO", "fact": "The Gateway Arch is 630 feet tall, the tallest arch in the world.", "factTh": "ประตูโค้งเกตเวย์สูง 630 ฟุต เป็นซุ้มโค้งที่สูงที่สุดในโลก", "color": "sky" },
+  { "id": "tulsa", "at": 1520, "city": "Tulsa", "state": "OK", "fact": "Tulsa was once called the Oil Capital of the World.", "factTh": "ทัลซาเคยถูกเรียกว่าเมืองหลวงแห่งน้ำมันของโลก", "color": "desert" },
+  { "id": "oklahoma-city", "at": 1615, "city": "Oklahoma City", "state": "OK", "fact": "Oklahoma City is the capital of Oklahoma.", "factTh": "โอคลาโฮมาซิตีเป็นเมืองหลวงของรัฐโอคลาโฮมา", "color": "sign" },
+  { "id": "amarillo", "at": 1855, "city": "Amarillo", "state": "TX", "fact": "Amarillo means \"yellow\" in Spanish.", "factTh": "Amarillo ในภาษาสเปนแปลว่า \"สีเหลือง\"", "color": "sunset" },
+  { "id": "albuquerque", "at": 2120, "city": "Albuquerque", "state": "NM", "fact": "Every October, hundreds of hot air balloons fly here.", "factTh": "ทุกเดือนตุลาคม บอลลูนลมร้อนหลายร้อยลูกลอยขึ้นฟ้าที่นี่", "color": "sky" },
+  { "id": "flagstaff", "at": 2415, "city": "Flagstaff", "state": "AZ", "fact": "Flagstaff keeps its night sky dark, so you can see many stars.", "factTh": "แฟลกสแตฟดูแลให้ท้องฟ้ายามค่ำมืดสนิท จึงมองเห็นดาวได้มากมาย", "color": "desert" },
+  { "id": "grand-canyon", "at": 2485, "city": "Grand Canyon", "state": "AZ", "fact": "The Grand Canyon is about 277 miles long and over a mile deep.", "factTh": "แกรนด์แคนยอนยาวประมาณ 277 ไมล์ และลึกกว่าหนึ่งไมล์", "color": "sign" },
+  { "id": "las-vegas", "at": 2740, "city": "Las Vegas", "state": "NV", "fact": "Las Vegas is in the desert. It gets very little rain.", "factTh": "ลาสเวกัสอยู่กลางทะเลทราย ฝนตกน้อยมาก", "color": "sunset" },
+  { "id": "los-angeles", "at": 2985, "city": "Los Angeles", "state": "CA", "fact": "Los Angeles is the second largest city in the United States.", "factTh": "ลอสแอนเจลิสเป็นเมืองใหญ่อันดับสองของสหรัฐอเมริกา", "color": "sky" },
+  { "id": "santa-monica", "at": 3000, "city": "Santa Monica", "state": "CA", "fact": "This is the end of Route 66, next to the Pacific Ocean.", "factTh": "ที่นี่คือจุดสิ้นสุดของถนนสาย 66 ติดกับมหาสมุทรแปซิฟิก", "color": "desert" }
+ ]
+}

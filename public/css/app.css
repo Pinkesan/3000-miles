@@ -285,3 +285,76 @@ dialog.confirm h2 { font-size: 20px; margin-bottom: 8px; }
   background: var(--surface); color: var(--text); font: 800 72px/1 "Overpass Mono", monospace; cursor: pointer;
 }
 .stats-2 { grid-template-columns: 1fr 1fr; }
+
+/* Step 8: gauge, streak, results stop, map, postcard */
+.tank-row { display: flex; align-items: center; gap: 14px; }
+.tank-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gauge { flex: none; width: 120px; color: var(--text); }
+.gauge svg { display: block; width: 100%; height: auto; }
+.streak-line { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.rests { display: inline-flex; gap: 4px; margin-left: 4px; }
+.p-sign {
+  display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 5px;
+  background: #1d5fbf; color: #fff; font: 800 15px/1 "Overpass", sans-serif; box-shadow: inset 0 0 0 2px #fff;
+}
+.stop-reached {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px;
+  border-radius: 12px; border: 2px solid var(--lane); background: var(--surface); color: var(--text); text-decoration: none;
+}
+.stop-reached-t { font-weight: 600; }
+
+.map-road { position: relative; --row: 96px; margin: 0; padding: 0; list-style: none; }
+.map-road::before {
+  content: ""; position: absolute; left: 79px; top: calc(var(--row) / 2); bottom: calc(var(--row) / 2); width: 6px;
+  margin-left: -3px; background: #2b2e33;
+  background-image: repeating-linear-gradient(180deg, var(--lane) 0 10px, transparent 10px 22px);
+  background-size: 2px 100%; background-repeat: no-repeat; background-position: center;
+}
+.map-row { position: relative; height: var(--row); display: grid; grid-template-columns: 56px 48px 1fr; align-items: center; }
+.mile-post {
+  justify-self: end; min-width: 44px; padding: 4px 6px; margin-right: 4px; text-align: center; border-radius: 4px;
+  background: var(--sign); color: #fff; font: 800 15px/1.2 "Overpass Mono", monospace;
+}
+.map-dot { justify-self: center; z-index: 1; width: 16px; height: 16px; border-radius: 50%; background: var(--lane); border: 3px solid var(--bg); }
+.map-locked .map-dot { background: var(--line); }
+.map-locked .mile-post { background: var(--line); color: var(--muted); }
+.map-tile {
+  display: flex; flex-direction: column; padding: 8px 12px; border-radius: 8px; color: #fff; text-decoration: none;
+  border: 3px solid #fff; box-shadow: 0 0 0 1px var(--line);
+}
+.map-later { display: flex; flex-direction: column; padding: 8px 12px; color: var(--muted); }
+.map-city { font: 800 20px/1.15 "Overpass", sans-serif; }
+.map-state { font-size: 14px; opacity: .85; }
+.map-next { align-items: flex-start; text-align: left; padding: 8px 12px; }
+.map-next .map-city { font-size: 22px; }
+.map-car {
+  position: absolute; left: 79px; margin: -18px 0 0 -18px; z-index: 2; width: 36px; height: 36px; border-radius: 50%;
+  display: grid; place-items: center; background: var(--lane); color: var(--on-lane); border: 3px solid var(--bg);
+  top: calc(var(--row) / 2 + var(--f) * 15 * var(--row));
+}
+.map-car svg { width: 20px; height: 20px; }
+.map-sign, .map-tile.map-sign, .pc-sign { background: #0e6b4f; }
+.map-sunset, .pc-sunset { background: #e8773a; }
+.map-sky, .pc-sky { background: #2f7fc1; }
+.map-desert, .pc-desert { background: #b5533c; }
+.map-tile.map-sign { background: #0e6b4f; }
+
+.postcard {
+  display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+  aspect-ratio: 3 / 2; padding: 16px; border: 10px solid #fff; border-radius: 6px; color: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .3); animation: pc-flip 300ms ease-out;
+}
+.pc-sign { background: #0e6b4f; }
+.pc-greet { font: italic 700 clamp(18px, 5vw, 26px)/1.2 "Overpass", sans-serif; }
+.pc-city {
+  font: 800 clamp(34px, 11vw, 60px)/1.05 "Overpass", sans-serif; text-transform: uppercase; overflow-wrap: anywhere;
+  -webkit-text-stroke: 2px #16191d; paint-order: stroke fill; text-shadow: 0 3px 0 rgba(0, 0, 0, .35);
+}
+.pc-state { font: 700 20px/1.2 "Overpass", sans-serif; letter-spacing: .2em; }
+@keyframes pc-flip { from { transform: perspective(800px) rotateY(90deg); opacity: 0; } to { transform: none; opacity: 1; } }
+.postcard-back { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 6px; background: var(--surface); border: 2px solid var(--line); }
+.pc-fact { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 19px; }
+.postcard-back h2 { font-size: 17px; color: var(--muted); }
+.pc-words { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
+.pc-words li { display: flex; flex-direction: column; min-width: 0; padding: 4px 0; border-bottom: 1px solid var(--line); }
+@media (max-width: 420px) { .pc-words { grid-template-columns: 1fr; } }

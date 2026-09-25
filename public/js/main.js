@@ -2,6 +2,7 @@
 import { dayNumber } from './day.js';
 import { makeRng } from './rng.js';
 import { introOrder, makeDayPlan } from './plan.js';
+import { rollover } from './progress.js';
 import { createStore } from './store.js';
 import { setChildren, h, setTitle } from './ui.js';
 import { loadVoices, pickVoice, speak, stopSpeaking } from './speech.js';
@@ -11,6 +12,8 @@ import * as drive from './screens/drive.js';
 import * as results from './screens/results.js';
 import * as card from './screens/card.js';
 import * as arcade from './screens/arcade.js';
+import * as map from './screens/map.js';
+import * as postcard from './screens/postcard.js';
 
 const query = new URLSearchParams(location.search);
 export const testMode = query.has('test');
@@ -23,6 +26,8 @@ const ROUTES = {
   results: { screen: results, title: 'สรุปช่วง' },
   card: { screen: card, title: 'การ์ดคำศัพท์' },
   arcade: { screen: arcade, title: 'Highway Rush' },
+  map: { screen: map, title: 'แผนที่' },
+  postcard: { screen: postcard, title: 'โปสการ์ด' },
 };
 
 function applyTheme(theme) {
@@ -43,13 +48,23 @@ async function boot() {
     return;
   }
 
+  let routeData;
+  try {
+    const res = await fetch('data/route.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error(String(res.status));
+    routeData = await res.json();
+  } catch {
+    setChildren(root, h('p', { class: 'boot-error', lang: 'th' }, 'โหลดเส้นทางไม่สำเร็จ ลองรีเฟรชหน้านี้อีกครั้ง'));
+    return;
+  }
+
   const store = createStore();
   const words = data.words;
   const byId = new Map(words.map((w) => [w.id, w]));
   const voices = { list: [], picked: null };
 
   const app = {
-    words, byId, total: data.total, levels: data.levels, store, testMode,
+    words, byId, total: data.total, levels: data.levels, store, testMode, route: routeData,
     order: introOrder(words, store.state.settings.startLevel),
     get settings() { return store.state.settings; },
     today: () => fixedToday ?? dayNumber(new Date()),
@@ -70,7 +85,10 @@ async function boot() {
       const today = app.today();
       const { days, cards } = store.state;
       if (!days[today]) {
-        store.update((s) => { s.days[today] = makeDayPlan(cards, today, s.settings); });
+        store.update((s) => {
+          s.days[today] = makeDayPlan(cards, today, s.settings);
+          s.streak = rollover(s.streak, today); // missed days spend rests or end the streak
+        });
       }
       return store.state.days[today];
     },

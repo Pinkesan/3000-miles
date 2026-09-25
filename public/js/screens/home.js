@@ -1,12 +1,22 @@
-// #/ Home (DESIGN §7). The gauge, streak and route come in Step 8.
+// #/ Home (DESIGN §7). Checkpoints (Step 9), words and settings links come later.
 import { h, setChildren, th, en, thaiDay } from '../ui.js';
-import { countMiles } from '../srs.js';
+import { icons } from '../icons.js';
+import { countMiles, countFlat } from '../srs.js';
+import { nextStop } from '../progress.js';
+import { tankFill, tankText } from '../summary.js';
 import { odometer } from '../components/odometer.js';
+import { gauge } from '../components/gauge.js';
 import { introOrder, newLeft } from '../plan.js';
 import { arcadeOpen, arcadeUnlocked } from '../arcade.js';
 
 const PER_DAY = [5, 10, 15, 20, 30];
 const LEVELS = ['A1', 'A2', 'B1', 'B2'];
+
+// Rests are small P (parking) signs, at most 2.
+const restSigns = (n) => n > 0
+  ? h('span', { class: 'rests', id: 'rests', role: 'img', 'aria-label': `จุดพัก ${n}` },
+      Array.from({ length: n }, () => h('span', { class: 'p-sign', lang: 'en' }, 'P')))
+  : null;
 
 export function render(root, app) {
   const { store } = app;
@@ -19,6 +29,9 @@ export function render(root, app) {
     ? `วันนี้: ทวนคำค้างให้หมดก่อน (ค้าง ${plan.dueTotal} คำ)`
     : `วันนี้: ทวน ${plan.due.length} คำ · คำใหม่ ${plan.newTarget} คำ`;
 
+  const next = nextStop(app.route, miles);
+  const { streak } = store.state;
+  const flat = countFlat(store.state.cards);
   const hasLeg = store.state.leg?.day === today;
   const planDone = plan.goal > 0 && plan.done >= plan.goal;
   // after the plan and its one ขับเพิ่ม leg, nothing is left to drive today (DESIGN §5)
@@ -59,13 +72,28 @@ export function render(root, app) {
     root,
     h('header', { class: 'home-head' }, en('3000 Miles', { class: 'brand' }), th(thaiDay(today), { class: 'muted' })),
     odometer(miles),
-    h('div', { class: 'sign', lang: 'en' },
-      h('span', { class: 'sign-small' }, 'NEXT STOP'),
-      h('span', { class: 'sign-big' }, 'Santa Monica'),
-      h('span', { class: 'sign-small' }, '3,000 miles to go'),
+    next
+      ? h('div', { class: 'sign', lang: 'en', id: 'next-stop' },
+          h('span', { class: 'sign-small' }, 'NEXT STOP'),
+          h('span', { class: 'sign-big' }, next.city),
+          h('span', { class: 'sign-small' }, `${(next.at - miles).toLocaleString('en-US')} miles to go`),
+        )
+      : h('div', { class: 'sign', id: 'next-stop' }, th('ถึงซานตาโมนิกาแล้ว!', { class: 'sign-big' })),
+    h('div', { class: 'tank-row' },
+      gauge(tankFill(plan)),
+      h('div', { class: 'tank-text' },
+        h('p', { class: 'today-line', id: 'plan-line' }, th(planLine)),
+        h('p', { class: 'muted', id: 'tank-line' }, th(tankText(plan))),
+      ),
     ),
-    h('p', { class: 'today-line' }, th('จุดหมาย: Santa Monica · 3,000 ไมล์')),
-    h('p', { class: 'today-line', id: 'plan-line' }, th(planLine)),
+    h('p', { class: 'today-line streak-line', id: 'streak-line' },
+      th(`ขับต่อเนื่อง ${streak.cur} วัน`),
+      streak.best > 0 ? th(` · สูงสุด ${streak.best} วัน`, { class: 'muted' }) : null,
+      restSigns(streak.rests),
+    ),
+    flat > 0
+      ? h('p', { class: 'today-line', id: 'flat-line' }, th(`ยางแบน ${flat} คำ ทวนให้ถูกแล้วจะหายเอง`))
+      : null,
     (plan.score ?? 0) > 0 || store.state.records.day > 0
       ? h('p', { class: 'today-line', id: 'score-line' },
           th(`คะแนนวันนี้ ${(plan.score ?? 0).toLocaleString('en-US')} · สถิติ ${store.state.records.day.toLocaleString('en-US')}`))
@@ -83,6 +111,7 @@ export function render(root, app) {
         ? h('a', { class: 'btn btn-secondary', href: '#/arcade', id: 'rush-link' }, en('Highway Rush'), rushBest ? th(` · สถิติ ${rushBest.toLocaleString('en-US')}`) : null)
         : h('p', { class: 'muted', id: 'rush-locked' }, en('Highway Rush'), th(' · เปิดเมื่อขับครบแผนวันนี้'))
       : null,
+    h('a', { class: 'btn btn-secondary', href: '#/map', id: 'map-link' }, h('span', { html: icons.map }), th('แผนที่ทริป')),
     ready < app.total
       ? h('p', { class: 'muted ready', id: 'ready' }, th('คำที่พร้อมเล่น '), en(`${ready}/${app.total}`))
       : null,

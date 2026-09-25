@@ -1,12 +1,29 @@
-// #/results: summary of the last leg (DESIGN §7). The gauge and postcards come in Step 8.
-import { h, setChildren, th, en } from '../ui.js';
+// #/results: summary of the last leg (DESIGN §7). The checkpoint button comes in Step 9.
+import { h, setChildren, th, en, toast } from '../ui.js';
+import { fillTank, newlyReached, reachedStops } from '../progress.js';
 import { icons } from '../icons.js';
 import { odometer } from '../components/odometer.js';
 import { newLeft } from '../plan.js';
 import { arcadeOpen } from '../arcade.js';
 import { gradedToday } from '../srs.js';
-import { legSummary, tankText, levelTip } from '../summary.js';
+import { legSummary, tankText, tankFill, levelTip } from '../summary.js';
 import * as sfx from '../sfx.js';
+
+// Reaching a stop unlocks its postcard. Step 9 puts a checkpoint exam here instead: change only this.
+// Returns the stops to show as new: those crossed by this leg (start, end] plus any older ones
+// that were never unlocked (saves from before Step 8).
+function unlockReached(app, endMiles, startMiles) {
+  const { store, route } = app;
+  const today = app.today();
+  const fresh = newlyReached(route, endMiles, store.state.stops);
+  const shown = new Set(reachedStops(route, startMiles, endMiles).map((s) => s.id));
+  if (fresh.length) {
+    store.update((s) => { for (const st of fresh) s.stops[st.id] = today; });
+    sfx.stop();
+    fresh.forEach((s) => shown.add(s.id));
+  }
+  return route.stops.filter((s) => shown.has(s.id));
+}
 
 const stat = (value, label) =>
   h('div', { class: 'stat' }, en(String(value), { class: 'stat-n' }), th(label, { class: 'stat-l' }));
@@ -28,12 +45,17 @@ export function render(root, app) {
   if (sum.gained > 0) {
     // roll the wheels to the new total after the first paint
     timer = setTimeout(() => {
-      const digits = String(sum.endMiles).padStart(4, '0').slice(-4);
-      odo.querySelectorAll('.wheel').forEach((w, i) => w.style.setProperty('--d', digits[i]));
-      odo.setAttribute('aria-label', `${sum.endMiles} ไมล์`);
+      odo.set(sum.endMiles);
       sfx.mile();
     }, 250);
   }
+
+  // The tank is full for the first time today: the streak grows (DESIGN §6).
+  if (plan && tankFill(plan) >= 1 && store.state.streak.last !== today) {
+    store.update((s) => { s.streak = fillTank(s.streak, today); });
+    toast('เติมน้ำมันเต็มถังแล้ว วันนี้ขับครบ', 'ok');
+  }
+  const stops = unlockReached(app, sum.endMiles, sum.startMiles);
 
   // What can still be driven today? After the plan: one ขับเพิ่ม leg (DESIGN §5).
   const wordsLeft = !!plan && newLeft(plan, cards, app.order);
@@ -63,6 +85,10 @@ export function render(root, app) {
     sum.gained > 0
       ? h('p', { class: 'gain', id: 'gain' }, en(`+${sum.gained}`), th(' ไมล์'))
       : h('p', { class: 'gain gain-none', id: 'gain' }, th('ช่วงนี้ยังไม่ได้ไมล์เพิ่ม ไมล์ได้เมื่อจำคำนั้นได้ในสามวันต่างกัน')),
+    stops.map((s) =>
+      h('a', { class: 'stop-reached', href: `#/postcard/${s.id}`, id: `stop-${s.id}` },
+        h('span', { class: 'stop-reached-t' }, th('ถึง '), en(s.city), th(' แล้ว! ได้โปสการ์ดใบใหม่')),
+        h('span', { class: 'btn btn-primary' }, th('ดูโปสการ์ด')))),
     h('div', { class: 'stats' },
       stat(sum.pct == null ? '-' : `${sum.pct}%`, 'ตอบถูก'),
       stat(sum.taught, 'สอนคำใหม่'),
