@@ -1,5 +1,6 @@
 // #/results: summary of the last leg (DESIGN §7). The gauge and postcards come in Step 8.
 import { h, setChildren, th, en } from '../ui.js';
+import { icons } from '../icons.js';
 import { odometer } from '../components/odometer.js';
 import { newLeft } from '../plan.js';
 import { gradedToday } from '../srs.js';
@@ -45,6 +46,17 @@ export function render(root, app) {
   setChildren(
     root,
     h('h1', { class: 'results-title' }, th('จบช่วงนี้แล้ว')),
+    last.stars
+      ? h('div', { class: 'score-hero' },
+          en((last.score ?? 0).toLocaleString('en-US'), { class: 'score-big', id: 'leg-score' }),
+          th('คะแนน', { class: 'stat-l' }),
+          h('div', { class: 'stars', id: 'leg-stars', role: 'img', 'aria-label': `${last.stars} ดาว` },
+            [1, 2, 3].map((n) => h('span', { class: n > last.stars ? 'star-empty' : '', html: n > last.stars ? icons.starEmpty : icons.star }))),
+          (last.bestCombo ?? 0) >= 2 ? th(`ติดกันสูงสุด ${last.bestCombo}`, { class: 'stat-l' }) : null,
+          last.newCombo ? th(`สถิติใหม่: ติดกัน ${last.bestCombo} ครั้ง`, { class: 'record-line' }) : null,
+          last.newDay ? th(`สถิติใหม่: คะแนนวันนี้ ${(store.state.days[today]?.score ?? 0).toLocaleString('en-US')}`, { class: 'record-line' }) : null,
+        )
+      : null,
     odo,
     sum.gained > 0
       ? h('p', { class: 'gain', id: 'gain' }, en(`+${sum.gained}`), th(' ไมล์'))

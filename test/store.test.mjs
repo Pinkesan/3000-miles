@@ -45,3 +45,10 @@ test('store saves and reloads; broken storage falls back to memory', () => {
   mem.set(KEY, '{not json');
   assert.deepEqual(createStore(storage).state, freshState());
 });
+
+test('records: fresh, missing and junk values', () => {
+  assert.deepEqual(freshState().records, { combo: 0, day: 0, dayOn: null });
+  assert.deepEqual(normalizeState({ cards: {} }).records, { combo: 0, day: 0, dayOn: null });
+  assert.deepEqual(normalizeState({ records: { combo: 12, day: 340, dayOn: 20700 } }).records, { combo: 12, day: 340, dayOn: 20700 });
+  assert.deepEqual(normalizeState({ records: { combo: 'x', day: null, dayOn: 'y' } }).records, { combo: 0, day: 0, dayOn: null });
+});

@@ -37,4 +37,5 @@ function play(notes, type = 'sine', gain = 0.12) {
 export const right = () => play([[660, 0, 0.12], [880, 0.09, 0.18]]);
 export const wrong = () => play([[220, 0, 0.22]], 'triangle', 0.14);
 export const mile = () => play([[523, 0, 0.1], [659, 0.1, 0.1], [784, 0.2, 0.22]]);
+export const combo = () => play([[784, 0, 0.08], [988, 0.07, 0.08], [1319, 0.14, 0.16]], 'triangle', 0.1);
 export const stop = () => play([[392, 0, 0.14], [523, 0.14, 0.14], [659, 0.28, 0.14], [784, 0.42, 0.4]]);

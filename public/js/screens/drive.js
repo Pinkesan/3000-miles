@@ -5,6 +5,7 @@ import { makeRng } from '../rng.js';
 import { makeQuestion, isCorrect } from '../quiz.js';
 import { buildLeg, legCurrent, legProgress, legReduce, recordAnswer } from '../plan.js';
 import { countMiles } from '../srs.js';
+import { scoreAnswer, comboMultiplier, legStars, updateRecords } from '../score.js';
 import { queueIds } from '../summary.js';
 import * as sfx from '../sfx.js';
 import { wordCard } from '../components/wordcard.js';
@@ -19,6 +20,7 @@ export function render(root, app) {
   let destroyed = false;
   let exiting = false;
   let timer = 0;
+  let plusTimer = 0;
   let cur = null;
 
   // a saved leg without v: 2 comes from an older version: drop it (its answers are saved already)
@@ -48,11 +50,15 @@ export function render(root, app) {
   // top bar
   const lane = h('div', { class: 'lane', 'aria-hidden': 'true' }, h('span', { class: 'lane-car', html: icons.car }));
   const count = h('span', { class: 'lane-count', lang: 'en' });
+  const scoreNum = en('0', { class: 'leg-score' });
+  const scorePlus = en('', { class: 'score-plus', hidden: true });
+  const comboChip = h('span', { class: 'combo-chip', hidden: true });
+  const info = h('div', { class: 'lane-info' }, h('span', { class: 'leg-score-wrap' }, scoreNum, scorePlus), comboChip, count);
   const chipNum = en('', { class: 'chip-num' });
   const plus = th('+1 ไมล์', { class: 'chip-plus', hidden: true });
   const bar = h('header', { class: 'drive-bar' },
     h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'ออกจากช่วงนี้', title: 'ออกจากช่วงนี้', html: icons.x, onclick: exit }),
-    h('div', { class: 'lane-wrap' }, lane, count),
+    h('div', { class: 'lane-wrap' }, lane, info),
     h('span', { class: 'mile-chip' }, chipNum, en(' mi'), plus),
   );
   const stage = h('div', { class: 'stage' });
@@ -63,6 +69,13 @@ export function render(root, app) {
     lane.style.setProperty('--p', String(legProgress(leg)));
     count.textContent = `${leg.done} / ${total}`;
     chipNum.textContent = String(countMiles(store.state.cards));
+    const sc = leg.score ?? { score: 0, combo: 0, bestCombo: 0 };
+    scoreNum.textContent = sc.score.toLocaleString('en-US');
+    comboChip.hidden = sc.combo < 3;
+    if (sc.combo >= 3) {
+      const m = comboMultiplier(sc.combo);
+      setChildren(comboChip, th(`ติดกัน ${sc.combo}`), m > 1 ? h('b', {}, ` ×${m}`) : null);
+    }
   }
 
   async function exit() {
@@ -75,7 +88,13 @@ export function render(root, app) {
 
   function finish() {
     store.update((s) => {
-      s.lastLeg = { day: today, stats: leg.stats, startMiles: leg.startMiles, endMiles: countMiles(s.cards), ids: leg.ids };
+      const sc = leg.score ?? { score: 0, combo: 0, bestCombo: 0 };
+      const rec = updateRecords(s.records, { combo: sc.bestCombo, dayScore: s.days[today]?.score ?? 0, today });
+      s.records = rec.records;
+      s.lastLeg = {
+        day: today, stats: leg.stats, startMiles: leg.startMiles, endMiles: countMiles(s.cards), ids: leg.ids,
+        score: sc.score, stars: legStars(leg.stats), bestCombo: sc.bestCombo, newCombo: rec.newCombo, newDay: rec.newDay,
+      };
       s.leg = null;
     });
     location.hash = '#/results';
@@ -92,7 +111,7 @@ export function render(root, app) {
       store.update((s) => { s.leg = leg; });
       return show();
     }
-    cur = { item, word, q: null, view: null, answered: false, advanced: false };
+    cur = { item, word, q: null, view: null, answered: false, advanced: false, t0: performance.now() };
     updateBar();
     window.scrollTo(0, 0);
     if (item.kind === 'meet') showMeet(word);
@@ -119,6 +138,7 @@ export function render(root, app) {
       tag: STAGE_TAG[item.kind] ?? 'คำถาม',
       kind: item.kind,
       canSkip: item.kind === 'probe',
+      speedBar: true,
       cheer: leg.done,
       onAnswer: answer,
       onSkip: skip,
@@ -140,8 +160,19 @@ export function render(root, app) {
     const { item, q } = cur;
     const correct = isCorrect(q, response);
     const res = recordAnswer({ cards: store.state.cards, plan: store.state.days[today], leg, today, item, correct });
-    leg = legReduce(res.leg, { type: 'answer', correct });
-    store.update((s) => { s.cards = res.cards; s.days[today] = res.plan; s.leg = leg; });
+    const before = leg.score ?? { score: 0, combo: 0, bestCombo: 0 };
+    const sc = scoreAnswer(before, { type: item.type, kind: item.kind, correct, ms: performance.now() - cur.t0 });
+    leg = { ...legReduce(res.leg, { type: 'answer', correct }), score: { score: sc.score, combo: sc.combo, bestCombo: sc.bestCombo } };
+    const plan = { ...res.plan, score: (res.plan.score ?? 0) + sc.points };
+    store.update((s) => { s.cards = res.cards; s.days[today] = plan; s.leg = leg; });
+    updateBar();
+    if (sc.points > 0) {
+      scorePlus.textContent = `+${sc.points}`;
+      scorePlus.hidden = false;
+      clearTimeout(plusTimer);
+      plusTimer = setTimeout(() => { scorePlus.hidden = true; }, 900);
+      if (comboMultiplier(sc.combo) > comboMultiplier(before.combo)) sfx.combo();
+    }
 
     if (res.mile) {
       sfx.mile();
@@ -197,6 +228,7 @@ export function render(root, app) {
     destroy() {
       destroyed = true;
       clearTimeout(timer);
+      clearTimeout(plusTimer);
       document.removeEventListener('keydown', onKey);
       app.hooks = null;
     },

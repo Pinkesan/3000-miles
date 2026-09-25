@@ -62,6 +62,10 @@ export function render(root, app) {
     ),
     h('p', { class: 'today-line' }, th('จุดหมาย: Santa Monica · 3,000 ไมล์')),
     h('p', { class: 'today-line', id: 'plan-line' }, th(planLine)),
+    (plan.score ?? 0) > 0 || store.state.records.day > 0
+      ? h('p', { class: 'today-line', id: 'score-line' },
+          th(`คะแนนวันนี้ ${(plan.score ?? 0).toLocaleString('en-US')} · สถิติ ${store.state.records.day.toLocaleString('en-US')}`))
+      : null,
     dayDone
       ? h('div', { class: 'day-done', id: 'day-done', lang: 'th' },
           h('p', { class: 'day-done-title' }, 'วันนี้ขับครบแล้ว พรุ่งนี้มาขับต่อ'),

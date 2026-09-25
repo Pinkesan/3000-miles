@@ -40,7 +40,7 @@ export function makeDayPlan(cards, today, settings = {}) {
   const newTarget = dueAll.length > DUE_CAP ? 0 : (settings.newPerDay ?? 10);
   return {
     day: today, due, dueTotal: dueAll.length, newTarget, goal: due.length + newTarget,
-    done: 0, taught: 0, known: 0, right: 0, wrong: 0, miles: 0, legs: 0, shown: [],
+    done: 0, taught: 0, known: 0, right: 0, wrong: 0, miles: 0, legs: 0, shown: [], score: 0,
   };
 }
 
@@ -116,6 +116,7 @@ export function buildLeg({ plan, cards, byId, order, today, rnd, caps, extra = f
     newCount: ids.length,
     startMiles: countMiles(cards),
     stats: { right: 0, wrong: 0, taught: 0, known: 0, reviewed: 0, miles: 0 },
+    score: { score: 0, combo: 0, bestCombo: 0 },
   };
   return { leg, plan: { ...plan, shown: [...plan.shown, ...ids], legs: plan.legs + 1 } };
 }

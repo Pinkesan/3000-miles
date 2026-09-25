@@ -24,6 +24,7 @@ export function freshState() {
     lastLeg: null,
     streak: { cur: 0, best: 0, last: null, rests: 0 },
     stops: {},
+    records: { combo: 0, day: 0, dayOn: null },
     flags: {},
     arcade: { best: 0, runs: [] },
   };
@@ -50,6 +51,7 @@ export function normalizeState(saved) {
   if (!isObj(saved)) return f;
   const st = isObj(saved.streak) ? saved.streak : {};
   const arcade = isObj(saved.arcade) ? saved.arcade : {};
+  const rec = isObj(saved.records) ? saved.records : {};
   return {
     v: 1,
     settings: normalizeSettings(saved.settings),
@@ -61,6 +63,7 @@ export function normalizeState(saved) {
       cur: num(st.cur, 0), best: num(st.best, 0), last: Number.isFinite(st.last) ? st.last : null, rests: num(st.rests, 0),
     },
     stops: isObj(saved.stops) ? saved.stops : f.stops,
+    records: { combo: num(rec.combo, 0), day: num(rec.day, 0), dayOn: Number.isFinite(rec.dayOn) ? rec.dayOn : null },
     flags: isObj(saved.flags) ? saved.flags : f.flags,
     arcade: { best: num(arcade.best, 0), runs: Array.isArray(arcade.runs) ? arcade.runs : [] },
   };

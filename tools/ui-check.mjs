@@ -1,7 +1,7 @@
 // UI smoke test: drives headless Chrome through the app, saves screenshots to .shots/ and
 // reports JS errors. Starts its own server (port 0), so the game server on 5320 is left alone.
 //   npm run ui
-//   ONLY=home,card npm run ui   (scenes: home card drive types synonym resume done mobile dark light)   (Git Bash)   PowerShell: $env:ONLY='home'; npm run ui
+//   ONLY=home,card npm run ui   (scenes: home card drive types synonym score resume done mobile dark light)   (Git Bash)   PowerShell: $env:ONLY='home'; npm run ui
 // Option: CHROME=path/to/chrome.exe
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -317,6 +317,9 @@ try {
     const saved = JSON.parse(await evaluate(`localStorage.getItem(${JSON.stringify(KEY)})`));
     check(saved.leg === null && saved.lastLeg && Object.keys(saved.cards).length > 0, 'drive: cards and lastLeg saved, leg cleared');
     check(await evaluate(`!!document.querySelector('#gain') && !!document.querySelector('.stats') && !!document.querySelector('#home-btn')`), 'results: shown');
+    check(saved.lastLeg.score > 0 && saved.lastLeg.stars >= 1 && saved.lastLeg.stars <= 3, `score: lastLeg has a score and 1-3 stars (${saved.lastLeg.score}, ${saved.lastLeg.stars})`);
+    check(saved.days[Object.keys(saved.days)[0]].score === saved.lastLeg.score && saved.records.day === saved.lastLeg.score, 'score: plan.score and records.day match the leg');
+    check(await evaluate(`Number(document.querySelector('#leg-score').textContent.replace(/,/g, '')) > 0 && document.querySelectorAll('#leg-stars svg').length === 3`), 'score: results show the score and three stars');
     await sleep(1200);
     await shot('results');
     await evaluate(`location.reload()`).catch(() => {});
@@ -372,6 +375,40 @@ try {
       check(await evaluate(`!!document.querySelector('.fb-right')`), 'synonym: the right word is right');
       await viewport(1366, 768);
     }
+  }
+
+  if (want('score')) {
+    // five right answers in a row: the combo chip; the speed bar exists on multiple choice
+    await viewport(360, 740, true);
+    await loadWith({ cards: reviewCards() });
+    await setHash('#/drive');
+    const answerRight = async () => {
+      await waitFor(`!!__app.item() && !!__app.question()`);
+      const { item, q } = JSON.parse(await evaluate(`JSON.stringify({ item: __app.item(), q: __app.question() })`));
+      if (q.options) await evaluate(`document.querySelector('.opt[data-id=${JSON.stringify(q.id)}]').click()`);
+      else {
+        await evaluate(`document.querySelector('.answer-input').focus()`);
+        await send('Input.insertText', { text: q.accept[0] });
+        await evaluate(`document.querySelector('.answer-form button').click()`);
+      }
+      if (await evaluate(`!!document.querySelector('.btn-next')`)) await evaluate(`document.querySelector('.btn-next').click()`);
+      await waitFor(`__app.item()?.key !== ${JSON.stringify(item.key)}`);
+    };
+    for (let i = 0; i < 5; i++) await answerRight();
+    check(await evaluate(`!document.querySelector('.combo-chip').hidden && document.querySelector('.combo-chip').textContent.includes('5') && document.querySelector('.combo-chip').textContent.includes('1.5')`), 'score: combo chip shows ติดกัน 5 ×1.5');
+    check(await evaluate(`Number(document.querySelector('.leg-score').textContent.replace(/,/g, '')) > 0`), 'score: the leg score is shown');
+    check(!(await evaluate(`document.documentElement.scrollWidth > innerWidth`)), 'score: horizontal scroll with a combo at 360px');
+    check(await evaluate(`document.querySelector('.lane').getBoundingClientRect().width >= 120`), 'score: the lane keeps 120px at 360px');
+    await shot('drive-combo');
+    // speed bar on the first multiple-choice question, then hidden with reduced motion
+    for (let i = 0; i < 12 && !(await evaluate(`!!__app.question()?.options`)); i++) await answerRight();
+    if (await evaluate(`!!__app.question()?.options`)) {
+      check(await evaluate(`!!document.querySelector('.speed-bar') && getComputedStyle(document.querySelector('.speed-bar')).display !== 'none'`), 'score: the speed bar shows on multiple choice');
+      await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+      check(await evaluate(`getComputedStyle(document.querySelector('.speed-bar')).display === 'none'`), 'score: the speed bar is hidden with reduced motion');
+      await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
+    } else errors.push('check failed: score: no multiple-choice question found');
+    await viewport(1366, 768);
   }
 
   if (want('resume')) {

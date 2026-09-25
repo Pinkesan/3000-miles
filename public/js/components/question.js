@@ -27,8 +27,8 @@ export function miniCard(app, word) {
   );
 }
 
-// opts: { tag, kind ('probe' shows no mini card), canSkip, onAnswer, onSkip, onNext, cheer }
-export function questionView(app, q, { tag, kind, canSkip = false, onAnswer, onSkip, onNext, cheer = 0 }) {
+// opts: { tag, kind ('probe' shows no mini card), canSkip, speedBar (drive only), onAnswer, onSkip, onNext, cheer }
+export function questionView(app, q, { tag, kind, canSkip = false, speedBar = false, onAnswer, onSkip, onNext, cheer = 0 }) {
   const { word } = q;
   const typed = !q.options;
   const state = { replays: 0, retried: false, input: null, form: null, list: null };
@@ -67,9 +67,11 @@ export function questionView(app, q, { tag, kind, canSkip = false, onAnswer, onS
   const skip = canSkip
     ? h('button', { class: 'btn btn-secondary btn-skip', type: 'button', onclick: () => onSkip?.() }, th('ไม่รู้จักคำนี้'))
     : null;
+  // the speed bonus only exists for multiple choice (DESIGN §6); the bar drains over 6 s
+  const speed = speedBar && !typed ? h('div', { class: 'speed-bar', 'aria-hidden': 'true' }, h('i')) : null;
   const el = h('div', { class: 'question' },
     h('p', { class: 'stage-tag' }, th(tag)),
-    h('div', { class: `prompt prompt-${q.type}` }, prompt), control, skip, fb);
+    h('div', { class: `prompt prompt-${q.type}` }, prompt), speed, control, skip, fb);
 
   function submit(e) {
     e.preventDefault();
@@ -109,6 +111,7 @@ export function questionView(app, q, { tag, kind, canSkip = false, onAnswer, onS
     let answerText;
     let answerLang = 'en';
     if (skip) skip.disabled = true;
+    speed?.classList.add('speed-stop');
     if (q.options) {
       const right = q.options.find((o) => o.id === q.id);
       answerText = right.label;
