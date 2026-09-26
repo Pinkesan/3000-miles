@@ -1,7 +1,7 @@
 // UI smoke test: drives headless Chrome through the app, saves screenshots to .shots/ and
 // reports JS errors. Starts its own server (port 0), so the game server on 5320 is left alone.
 //   npm run ui
-//   ONLY=home,card npm run ui   (scenes: home card words word settings backup drive types synonym say score arcade map postcard arrive checkpoint streak resume done pwa mobile dark light)   (Git Bash)   PowerShell: $env:ONLY='home'; npm run ui
+//   ONLY=home,card npm run ui   (scenes: home card words word flags perf settings backup drive types synonym say score arcade map postcard arrive checkpoint streak resume done pwa mobile dark light)   (Git Bash)   PowerShell: $env:ONLY='home'; npm run ui
 // Option: CHROME=path/to/chrome.exe
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -357,7 +357,8 @@ try {
   if (want('home')) {
     await setHash('#/');
     check(await evaluate(`!!document.querySelector('.odometer') && !!document.querySelector('#main-btn')`), 'home: odometer and main button');
-    check(await evaluate(`document.querySelector('#ready')?.textContent.includes('/3000')`), 'home: ready count');
+    // the ready count only shows while some words still have no content
+    check(await evaluate(`!document.querySelector('#ready') === (__app.app.words.length === __app.app.total)`), 'home: ready count shows only while content is missing');
     check(await evaluate(`document.querySelector('#level-line')?.textContent === 'ระดับ A1 · เริ่มแล้ว 0 / 900 คำ'`), 'home: level line starts at A1');
     await shot('home');
     check(await evaluate(`!document.querySelector('#new-per-day') && !!document.querySelector('#words-link') && !!document.querySelector('#settings-link')`), 'home: links to words and settings, no temporary selects');
@@ -419,6 +420,52 @@ try {
     await shot('word-learned');
     await setHash('#/word/nope-not-a-word');
     check(await evaluate(`location.hash.startsWith('#/words')`), 'word: unknown id goes to the list');
+  }
+
+  if (want('flags')) {
+    await loadWith({ flags: { [words[1].id]: { day: 20500, note: 'x' }, [rich.id]: { day: 20500, note: '' } } });
+    check(await evaluate(`!document.querySelector('#flag-line')`), 'flags: home has no flag line');
+    await setHash('#/settings');
+    check(await evaluate(`document.querySelector('#flag-line a')?.textContent === 'คำที่แจ้งไว้ 2 คำ'`), 'flags: settings line counts flagged words');
+    await evaluate(`document.querySelector('#flag-line a').click()`);
+    await waitFor(`location.hash === '#/words?flag=1'`);
+    check(await evaluate(`document.querySelectorAll('#word-rows li').length === 2 && document.querySelector('#flag-chip').classList.contains('chip-on')`), 'flags: #/words?flag=1 lists only flagged words');
+    await evaluate(`document.querySelector('#flag-chip').click()`);
+    check(await evaluate(`!location.hash.includes('flag') && document.querySelectorAll('#word-rows li').length > 2`), 'flags: the chip turns the filter off');
+    await freshLoad();
+    await setHash('#/settings');
+    check(await evaluate(`document.querySelector('#flag-line')?.textContent === 'ยังไม่มีคำที่แจ้งไว้'`), 'flags: no flags says so');
+  }
+
+  // 4x CPU slowdown (Step 15): home shows within 1.5 s of navigation, a question builds in under 100 ms
+  if (want('perf')) {
+    await freshLoad();
+    await send('Emulation.setCPUThrottlingRate', { rate: 4 });
+    const t0 = Date.now();
+    await send('Page.navigate', { url: BASE });
+    await waitFor(`!!document.querySelector('#main-btn')`, 20000);
+    const homeMs = Date.now() - t0;
+    console.log(`perf: home ${homeMs} ms at 4x slowdown`);
+    check(homeMs < 1500, `perf: home took ${homeMs} ms (limit 1500)`);
+    const ms = await evaluate(`(async () => {
+      const { makeQuestion } = await import('/js/quiz.js');
+      const { makeRng } = await import('/js/rng.js');
+      const app = __app.app;
+      const times = [];
+      for (const type of ['meaning', 'word', 'gap']) {
+        for (let i = 0; i < 6; i++) {
+          const word = app.words[i * 7];
+          const t = performance.now();
+          makeQuestion(word, type, app.words, makeRng('perf' + i), { hint: 'short' });
+          times.push(performance.now() - t);
+        }
+      }
+      return { first: times[0], worst: Math.max(...times), all: times.map((x) => Math.round(x)).join(' ') };
+    })()`);
+    console.log(`perf: ${ms.all}`);
+    console.log(`perf: question first ${ms.first.toFixed(1)} ms, worst ${ms.worst.toFixed(1)} ms`);
+    check(ms.worst < 100, `perf: a question took ${ms.worst.toFixed(1)} ms (limit 100)`);
+    await send('Emulation.setCPUThrottlingRate', { rate: 1 });
   }
 
   if (want('settings')) {

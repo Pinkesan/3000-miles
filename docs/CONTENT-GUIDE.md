@@ -103,6 +103,16 @@ Errors (must be fixed):
 Warnings (look at them): more than one word of `ex` outside the Oxford 3000; more than 3
 glosses; the same `th` as another entry in the batch.
 
+## Fixing flagged words
+
+While playing, the player flags a word on its page (`#/word/<id>`); the flags are kept in the
+save and in the backup file (settings → สำรองข้อมูลเป็นไฟล์, or `#/words?flag=1` on the phone).
+
+1. `node tools/flags.mjs <backup.json>` prints `batch | id | w | th | ex | note`, grouped by batch.
+2. Fix each entry with Edit (never regenerate a batch).
+3. `npm run check -- <batch>` for each touched batch, then `npm run build:data`.
+4. Commit `Fix: flagged words`, and upload `public` again (docs/DEPLOY.md).
+
 ## Batches per C-step
 
 | step | batches | words |

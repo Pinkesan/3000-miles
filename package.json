@@ -1,6 +1,6 @@
 {
   "name": "3000-miles",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "3000 Miles: a road-trip vocabulary game for Thai learners. Learn The Oxford 3000 (American English); every word is one mile across the USA.",
   "type": "module",
   "private": true,

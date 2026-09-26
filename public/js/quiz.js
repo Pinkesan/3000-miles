@@ -45,16 +45,30 @@ export function lookAlike(a, b) {
   const y = firstForm(b);
   if (x === y) return false;
   if (x.length >= 4 && y.length >= 4 && x.slice(0, 4) === y.slice(0, 4)) return true;
-  return editDistance(x, y) <= Math.max(1, Math.floor(Math.max(x.length, y.length) / 3));
+  const limit = Math.max(1, Math.floor(Math.max(x.length, y.length) / 3));
+  if (Math.abs(x.length - y.length) > limit) return false; // the distance is at least the length gap
+  return editDistance(x, y) <= limit;
+}
+
+// Look-alike ids per target word, found once per pool size (the pool only grows with the content).
+const alikeCache = new Map();
+function alikeIds(target, pool) {
+  const key = `${target.id}:${pool.length}`;
+  let ids = alikeCache.get(key);
+  if (!ids) {
+    ids = new Set(pool.filter((x) => x.id !== target.id && lookAlike(target, x)).map((x) => x.id));
+    alikeCache.set(key, ids);
+  }
+  return ids;
 }
 
 // Up to 2 look-alikes first (closest first, ties in random order), then same p and lv, same p, any.
 export function pickDistractors(target, pool, n, rnd) {
   const wTarget = target.w.toLowerCase();
-  const ok = pool.filter(
-    (x) => x.id !== target.id && x.w.toLowerCase() !== wTarget && !glossOverlap(x.th, target.th),
-  );
-  const alike = ok.filter((x) => lookAlike(target, x));
+  // gloss overlap is checked below, only for the few candidates that are looked at
+  const ok = pool.filter((x) => x.id !== target.id && x.w.toLowerCase() !== wTarget);
+  const alikeSet = alikeIds(target, pool);
+  const alike = ok.filter((x) => alikeSet.has(x.id));
   const rest = ok.filter((x) => !alike.includes(x)); // more than 2 look-alikes only if nothing else is left
   const similar = shuffle(alike, rnd)
     .map((x) => [editDistance(firstForm(target), firstForm(x)), x])

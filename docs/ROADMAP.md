@@ -66,7 +66,7 @@
 - [x] **C8.** Content b1-05, b1-06, b1-07
 - [x] **C9.** Content b2-04, b2-05, b2-06
 - ~~**Step 14.** Fast Lane: skip a level you already know~~ Dropped in Plan change 3: levels come in order (DESIGN §1 rule 10).
-- [ ] **Step 15.** Fix reported words + portfolio polish → [steps/15-polish.md](steps/15-polish.md)
+- [x] **Step 15.** Fix reported words + portfolio polish → [steps/15-polish.md](steps/15-polish.md)
 
 ## Prompt สำหรับเริ่ม session
 
@@ -76,6 +76,12 @@ and paste:
 ```
 ทำเกม 3000 Miles ต่อ: อ่าน docs/ROADMAP.md แล้วทำขั้นถัดไปที่ยังไม่ติ๊กในหัวข้อ Status
 ทำแค่ขั้นเดียว ตาม Definition of done ใน CLAUDE.md แล้วสรุปสั้นๆ เป็นภาษาไทย
+```
+
+Prompt for fixing flagged words (put the backup file in this folder first):
+
+```
+แก้คำที่ผู้เล่นแจ้งไว้: รัน node tools/flags.mjs <ไฟล์สำรอง> แล้วทำตาม "Fixing flagged words" ใน docs/CONTENT-GUIDE.md
 ```
 
 ## How to work in every session
@@ -106,6 +112,7 @@ Token economy:
 
 ## Log
 
+- 2026-09-26: Step 15. `tools/flags.mjs` (+ `test/flags.test.mjs`) lists flagged words from a backup by batch; "Fixing flagged words" in CONTENT-GUIDE and a prompt in this file; settings `#flag-line` ("คำที่แจ้งไว้ N คำ") links to `#/words?flag=1`, the word list got a `#flag-chip` filter; README rewritten (3 screenshots in `docs/img/`); performance: `lookAlike` skips the edit distance when the length gap alone is too big, look-alike ids are cached per target and pool size, the gloss filter runs only on the candidates looked at; ui-check scenes `flags` and `perf` (4x CPU slowdown: home ~0.2–0.5 s, worst question ~30–45 ms, so `words.json` stays in one file); copy pass over all Thai UI strings: no ครับ/ค่ะ/ผม/ดิฉัน, nothing against DESIGN §9 and no online-game or gambling words, nothing changed; version 0.5.0. Not done, waiting for the user: publishing on GitHub and linking from the portfolio (task 6).
 - 2026-09-26: Content review (Opus, asked by the user). All 30 batches read entry by entry; 299 entries fixed (`th` 76, `ex` 177, `exTh` 232, `other` 15, `p` 2), each with Edit. Wrong or misleading meanings (fail สอบตก, occasion, toilet ชักโครก, somebody, could, folks); British senses and words dropped (post/revise/ring/pitch senses, gearbox, do the washing); ungrammatical or unnatural English (made of a cell, famous celebrity, bird on the window); awkward Thai and four คะ particles; `bet` glossed with Thai gambling words (CLAUDE.md rule 10) and a pond as บ่อน้ำ; five glosses with ", " inside parentheses (broke gloss splitting); ~115 example sentences that repeated or nearly repeated another word's sentence, 13 of them gap sentences that fit two answers; POS mismatches (left, inside, downtown); object pronouns marked (กรรม); US units with metric (mile, pound, foot, inch, quarter); ๆ spacing unified. `npm run check` 0 errors 0 warnings; `build:data` 3000 words; 143 tests pass.
 - 2026-09-26: C9. `content/{b2-04,b2-05,b2-06}.json` (300 words, `npm run check` 0 errors 0 warnings each); `build:data` → 3000 words (A1 900, A2 800, B1 700, B2 600); 143 tests pass. All 3000 words now have content. No deviations.
 - 2026-09-26: C8. `content/{b1-05,b1-06,b1-07}.json` (300 words, `npm run check` 0 errors 0 warnings each); `build:data` → 2700 words (A1 900, A2 800, B1 700, B2 300); 143 tests pass. B1 is now complete. No deviations.

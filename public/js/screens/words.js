@@ -7,12 +7,14 @@ import { LEVELS, PAGE, STATUSES, STATUS_TH, chipCounts, filterWords } from '../w
 import { boxGauge } from '../components/wordrow.js';
 
 export function render(root, app, { query }) {
-  const { cards } = app.store.state;
+  const { cards, flags } = app.store.state;
   const f = {
     q: query.get('q') || '',
     lv: LEVELS.includes(query.get('lv')) ? query.get('lv') : '',
     st: STATUSES.includes(query.get('st')) ? query.get('st') : '',
+    fl: query.get('flag') === '1',
   };
+  const pool = () => (f.fl ? app.words.filter((w) => flags[w.id]) : app.words);
   let shown = PAGE;
   let timer = 0;
 
@@ -20,6 +22,7 @@ export function render(root, app, { query }) {
   function remember() {
     const p = new URLSearchParams();
     for (const k of ['lv', 'st', 'q']) if (f[k]) p.set(k, f[k]);
+    if (f.fl) p.set('flag', '1');
     const qs = p.toString();
     history.replaceState(null, '', `#/words${qs ? `?${qs}` : ''}`);
   }
@@ -34,6 +37,7 @@ export function render(root, app, { query }) {
   });
   const levelChips = h('div', { class: 'chips', id: 'level-chips', role: 'group', 'aria-label': 'ระดับ' });
   const statusChips = h('div', { class: 'chips', id: 'status-chips', role: 'group', 'aria-label': 'สถานะ' });
+  const flagChip = h('button', { id: 'flag-chip', type: 'button', onclick: () => { f.fl = !f.fl; shown = PAGE; remember(); paint(); } });
   const countLine = h('p', { class: 'muted', id: 'count-line' });
   const list = h('ul', { class: 'word-rows', id: 'word-rows' });
   const more = h('button', { class: 'btn btn-secondary', id: 'more-btn', type: 'button' }, th('แสดงเพิ่ม'));
@@ -47,14 +51,17 @@ export function render(root, app, { query }) {
     }, label, ' ', en(String(count), { class: 'chip-n' }));
 
   function paint() {
-    const counts = chipCounts(app.words, cards, f);
+    const counts = chipCounts(pool(), cards, f);
     setChildren(levelChips,
       chip('lv', '', th('ทั้งหมด'), counts.allLevels),
       LEVELS.map((lv) => chip('lv', lv, en(lv), counts.levels[lv])));
     setChildren(statusChips,
       chip('st', '', th('ทุกสถานะ'), counts.allStatuses),
       STATUSES.map((s) => chip('st', s, th(STATUS_TH[s]), counts.statuses[s])));
-    const rows = filterWords(app.words, cards, f);
+    setChildren(flagChip, th(`แจ้งไว้ ${Object.keys(flags).length} คำ`));
+    flagChip.className = `chip${f.fl ? ' chip-on' : ''}`;
+    flagChip.setAttribute('aria-pressed', f.fl ? 'true' : 'false');
+    const rows = filterWords(pool(), cards, f);
     const part = rows.slice(0, shown);
     setChildren(countLine, th(rows.length ? `แสดง ${part.length} จาก ${rows.length} คำ` : 'ไม่พบคำที่ตรงกัน'));
     setChildren(list, part.map((w) => {
@@ -71,7 +78,7 @@ export function render(root, app, { query }) {
     root,
     h('a', { class: 'btn btn-quiet back', href: '#/' }, h('span', { html: icons.back }), th('กลับ')),
     h('h1', { class: 'results-title' }, th('คลังคำศัพท์')),
-    input, levelChips, statusChips, countLine, list, more,
+    input, levelChips, statusChips, h('div', { class: 'chips' }, flagChip), countLine, list, more,
   );
   paint();
   return { destroy() { clearTimeout(timer); } };

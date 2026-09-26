@@ -138,6 +138,10 @@ export function render(root, app) {
     toast('เริ่มใหม่แล้ว', 'ok');
   }
 
+  const nFlags = Object.keys(store.state.flags).length;
+  const flagLine = h('p', { class: 'muted', id: 'flag-line' },
+    nFlags ? h('a', { href: '#/words?flag=1' }, th(`คำที่แจ้งไว้ ${nFlags} คำ`)) : th('ยังไม่มีคำที่แจ้งไว้'));
+
   setChildren(
     root,
     h('a', { class: 'btn btn-quiet back', href: '#/' }, h('span', { html: icons.back }), th('กลับ')),
@@ -157,6 +161,7 @@ export function render(root, app) {
     section('ข้อมูลในเครื่อง',
       h('p', { class: 'muted' }, th('ความก้าวหน้าเก็บอยู่ในเบราว์เซอร์ของเครื่องนี้ ถ้าใช้ iPhone ให้กด แชร์ > เพิ่มไปยังหน้าจอโฮม แล้วเปิดเกมจากไอคอนนั้น เพราะ Safari อาจล้างข้อมูลของเว็บที่ไม่ได้เปิดเกิน 7 วัน และสำรองข้อมูลเป็นไฟล์ไว้เป็นระยะ')),
       persistNote,
+      flagLine,
       h('button', { class: 'btn btn-secondary', id: 'backup-btn', type: 'button', onclick: download }, th('สำรองข้อมูลเป็นไฟล์')),
       h('button', { class: 'btn btn-secondary', id: 'restore-btn', type: 'button', onclick: () => file.click() }, th('กู้คืนจากไฟล์')),
       file,
