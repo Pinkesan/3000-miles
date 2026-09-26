@@ -60,7 +60,7 @@
 - [x] **Plan change 3.** One level at a time: A1 → B2 in order, no start level, Step 14 dropped, content in level order. Done with Opus on 2026-09-26.
 - [x] **C4.** Content a1-02 … a1-05
 - [x] **C5.** Content a1-06 … a1-09
-- [ ] **C6.** Content a2-04, a2-05, a2-06
+- [x] **C6.** Content a2-04, a2-05, a2-06
 - [ ] **Step 13.** Say it: speaking question type (optional) → [steps/13-say-it.md](steps/13-say-it.md)
 - [ ] **C7.** Content a2-07, a2-08, b1-04
 - [ ] **C8.** Content b1-05, b1-06, b1-07
@@ -106,6 +106,7 @@ Token economy:
 
 ## Log
 
+- 2026-09-26: C6. `content/{a2-04,a2-05,a2-06}.json` (300 words, `npm run check` 0 errors 0 warnings each); `build:data` → 2100 words (A1 900, A2 600, B1 300, B2 300); 141 tests pass. No deviations.
 - 2026-09-26: C5. `content/{a1-06,a1-07,a1-08,a1-09}.json` (400 words, `npm run check` 0 errors 0 warnings each); `build:data` → 1800 words (A1 900, A2 300, B1 300, B2 300); 141 tests pass. A1 is now complete. No deviations.
 - 2026-09-26: C4. `content/{a1-02,a1-03,a1-04,a1-05}.json` (400 words, `npm run check` 0 errors 0 warnings each); `build:data` → 1400 words (A1 500, A2 300, B1 300, B2 300); 141 tests pass. No deviations.
 - 2026-09-26: Plan change 3 (Opus). The player asked for one level at a time instead of
