@@ -48,7 +48,7 @@
 - [x] **C2.** Content a2-02, b1-02, b2-02
 - [x] **Step 8.** Road trip: route, map, postcards, fuel gauge, streak → [steps/08-road-trip.md](steps/08-road-trip.md)
 - [x] **Step 9.** Checkpoints: an exam at every city → [steps/09-checkpoints.md](steps/09-checkpoints.md)
-- [ ] **C3.** Content a2-03, b1-03, b2-03
+- [x] **C3.** Content a2-03, b1-03, b2-03
 - [ ] **Step 10.** Word list, word detail, settings, backup → [steps/10-words-settings.md](steps/10-words-settings.md)
 - [ ] **Step 11.** Install on the phone: PWA, offline, deploy → [steps/11-pwa-deploy.md](steps/11-pwa-deploy.md)
 - [ ] **C4.** Content a2-04, b1-04, b2-04
@@ -98,6 +98,7 @@ Token economy:
 
 ## Log
 
+- 2026-09-26: C3. `content/{a2-03,b1-03,b2-03}.json` (300 words, `npm run check` 0 errors 0 warnings each); `build:data` → 1000 words (A1 100, A2 300, B1 300, B2 300); 128 tests pass. No deviations.
 - 2026-09-26: Step 9. New pure `checkpoint.js` (`cleared/openCheckpoint/canTry/examSize/examWords/examItems/examAnswer/examResult/passMark/recordTry/mapMiles`) + `test/checkpoint.test.mjs` and a store test (128 tests pass); `checkpoints: {}` and `exam: null` in the state; screen `#/checkpoint/<id>` (intro, exam with a saved `state.exam` that survives a reload, end with stars, missed words, postcard button), `components/stars.js`; `results.js` shows "ถึงด่านตรวจ <city> แล้ว" + เข้าด่าน (`unlockReached` removed); home: CHECKPOINT sign with the barrier stripe, เข้าด่าน or ลองใหม่พรุ่งนี้; map: barrier on the open checkpoint, the car waits (`mapMiles`), small stars on tiles. ui-check: new scene `checkpoint` (13/15 pass, reload mid-exam, 11/15 fail, map), `arrive` updated, intro and question in `mobile` and `dark`; `JS errors: none`. Deviations: the postcard is unlocked (`state.stops[id]`) when the pass is saved, not when รับโปสการ์ด is tapped, so leaving the end screen never strands a passed checkpoint; results show the open checkpoint on every leg while one is open, not only the leg that crossed it.
 - 2026-09-26: Step 8. `public/data/route.json` (`{ total, stops[16] }`), `progress.newlyReached`, `test/route.test.mjs` (117 tests pass); `odometer().set(value, { animate })`, new `components/gauge.js`; screens `#/map` and `#/postcard/<id>`; `main.js` loads `app.route` and calls `rollover` when a day's plan is made; home: NEXT STOP sign, gauge + plan line, streak with P signs, flat tires, map link; results: odometer rolls via `.set`, `fillTank` + toast when the tank first fills, `unlockReached` (in `results.js`, the one place Step 9 changes) saves `state.stops`, plays `sfx.stop()` and shows a postcard button per new stop. ui-check: scenes `map postcard arrive streak`, map/postcard/home in `mobile` and `dark`; `JS errors: none`. Deviations: the drive top bar has a mile chip, not an odometer, so it stays as is; `unlockReached` also unlocks older stops passed before Step 8; New York's back only mentions Journey to America (no link, no URL yet).
 - 2026-09-26: C2. `content/{a2-02,b1-02,b2-02}.json` (300 words, `npm run check` 0 errors 0 warnings each); `build:data` → 700 words (A1 100, A2 200, B1 200, B2 200); 113 tests pass. No deviations.
