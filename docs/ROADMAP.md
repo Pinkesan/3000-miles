@@ -50,7 +50,7 @@
 - [x] **Step 9.** Checkpoints: an exam at every city → [steps/09-checkpoints.md](steps/09-checkpoints.md)
 - [x] **C3.** Content a2-03, b1-03, b2-03
 - [x] **Step 10.** Word list, word detail, settings, backup → [steps/10-words-settings.md](steps/10-words-settings.md)
-- [ ] **Step 11.** Install on the phone: PWA, offline, deploy → [steps/11-pwa-deploy.md](steps/11-pwa-deploy.md)
+- [x] **Step 11.** Install on the phone: PWA, offline, deploy → [steps/11-pwa-deploy.md](steps/11-pwa-deploy.md)
 - [ ] **C4.** Content a2-04, b1-04, b2-04
 - [ ] **C5.** Content a2-05, b1-05, b2-05
 - [ ] **C6.** Content a2-06, b1-06, b2-06
@@ -82,7 +82,8 @@ and paste:
    line in the Log, unless it blocks the item. Don't start the next item, even with context
    left.
 4. Verify with the Definition of done in `CLAUDE.md`.
-5. Tick the item here and add one Log line: date, what was done, deviations from the step
+5. C-steps only change `public/data/`: no version bump, but tell the user to upload `public` again (docs/DEPLOY.md).
+   Tick the item here and add one Log line: date, what was done, deviations from the step
    file, numbers (tests, words with content).
 6. Commit. Report to the user in Thai: what changed, how to try it, what they must do.
 
@@ -98,6 +99,7 @@ Token economy:
 
 ## Log
 
+- 2026-09-26: Step 11. `public/img/icon.svg` + `tools/make-icons.mjs` (PNGs: 192, 512, maskable, apple-touch, favicon), `manifest.webmanifest`, `sw.js` (precache `FILES`, cache first, `data/*.json` network first, old caches deleted, `skipWaiting` message), registration + update toast (`toast` got an optional action button) in `main.js`, version 0.2.0, `test/pwa.test.mjs` (140 tests pass), ui-check scene `pwa` (installs the worker, reloads offline, manifest and icons load); `JS errors: none`. Settings shows whether storage is persistent. `docs/DEPLOY.md` (Thai). Deviations: persistence is read with `navigator.storage.persisted()` when settings opens, not stored in settings; the deploy itself is left to the user (no account touched), Netlify is the documented path.
 - 2026-09-26: Step 10. New pure `wordlist.js` (`filterWords/chipCounts/nextReviewText`), `plan.withNewPerDay`, `version.js`; store `exportData/importData/reset`; router passes `query`; screens `#/words` (search, level + status chips in the hash query via replaceState, pages of 100), `#/word/<id>` (detail, box gauge, next review, flag with note), `#/settings` (pace + time line, start level, voice/rate/autoplay/sound/theme, backup, restore, reset, about); `components/wordrow.js` links words on results, postcards, checkpoint and Rush missed lists and the mini card to `#/word/<id>`; home lost the temporary selects and links to words + settings. ui-check: scenes `words word settings backup`, three screens in `mobile`/`dark`/`light`; `JS errors: none`. 137 tests pass. Deviations: the start-level tip links to settings; the word page back link uses history.back() so the list keeps its filters.
 - 2026-09-26: C3. `content/{a2-03,b1-03,b2-03}.json` (300 words, `npm run check` 0 errors 0 warnings each); `build:data` → 1000 words (A1 100, A2 300, B1 300, B2 300); 128 tests pass. No deviations.
 - 2026-09-26: Step 9. New pure `checkpoint.js` (`cleared/openCheckpoint/canTry/examSize/examWords/examItems/examAnswer/examResult/passMark/recordTry/mapMiles`) + `test/checkpoint.test.mjs` and a store test (128 tests pass); `checkpoints: {}` and `exam: null` in the state; screen `#/checkpoint/<id>` (intro, exam with a saved `state.exam` that survives a reload, end with stars, missed words, postcard button), `components/stars.js`; `results.js` shows "ถึงด่านตรวจ <city> แล้ว" + เข้าด่าน (`unlockReached` removed); home: CHECKPOINT sign with the barrier stripe, เข้าด่าน or ลองใหม่พรุ่งนี้; map: barrier on the open checkpoint, the car waits (`mapMiles`), small stars on tiles. ui-check: new scene `checkpoint` (13/15 pass, reload mid-exam, 11/15 fail, map), `arrive` updated, intro and question in `mobile` and `dark`; `JS errors: none`. Deviations: the postcard is unlocked (`state.stops[id]`) when the pass is saved, not when รับโปสการ์ด is tapped, so leaving the end screen never strands a passed checkpoint; results show the open checkpoint on every leg while one is open, not only the leg that crossed it.

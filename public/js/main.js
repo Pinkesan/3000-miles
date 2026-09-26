@@ -4,7 +4,7 @@ import { makeRng } from './rng.js';
 import { introOrder, makeDayPlan } from './plan.js';
 import { rollover } from './progress.js';
 import { createStore } from './store.js';
-import { setChildren, h, setTitle } from './ui.js';
+import { setChildren, h, setTitle, toast } from './ui.js';
 import { loadVoices, pickVoice, speak, stopSpeaking } from './speech.js';
 import { setSound } from './sfx.js';
 import * as home from './screens/home.js';
@@ -42,6 +42,30 @@ function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
   const dark = theme === 'dark' || (theme === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#15171b' : '#eef1ee');
+}
+
+// Offline support. A new worker waits until the player taps อัปเดต, then the page reloads on controllerchange.
+function registerWorker() {
+  if (testMode || !('serviceWorker' in navigator)) return;
+  const offer = (worker) => toast('มีเวอร์ชันใหม่', 'info', 20000, {
+    label: 'อัปเดต',
+    onclick: () => worker.postMessage('skipWaiting'),
+  });
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloading) return;
+    reloading = true;
+    location.reload();
+  });
+  navigator.serviceWorker.register('sw.js').then((reg) => {
+    if (reg.waiting && navigator.serviceWorker.controller) offer(reg.waiting);
+    reg.addEventListener('updatefound', () => {
+      const worker = reg.installing;
+      worker?.addEventListener('statechange', () => {
+        if (worker.state === 'installed' && navigator.serviceWorker.controller) offer(worker);
+      });
+    });
+  }).catch(() => {});
 }
 
 async function boot() {
@@ -106,6 +130,7 @@ async function boot() {
   app.applySettings();
   matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', app.applySettings);
   navigator.storage?.persist?.().catch(() => {});
+  registerWorker();
   app.ensurePlan();
 
   let current = null;

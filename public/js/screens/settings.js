@@ -37,6 +37,10 @@ export function render(root, app) {
   const set = (fn) => { store.update((s) => fn(s.settings, s)); };
 
   const paceNote = h('p', { class: 'muted', id: 'pace-note' });
+  const persistNote = h('p', { class: 'muted', id: 'persist-note', lang: 'th' });
+  navigator.storage?.persisted?.().then((ok) => {
+    if (!destroyed) persistNote.textContent = ok ? 'ข้อมูลถูกเก็บแบบถาวร' : 'เบราว์เซอร์ยังไม่รับรองว่าเก็บข้อมูลถาวร ถ้าใช้ iPhone ให้เพิ่มเกมไปที่หน้าจอโฮมแล้วเปิดจากไอคอน';
+  }).catch(() => {});
   const paintPace = () => setChildren(paceNote, th(PACE_TEXT[app.settings.newPerDay]));
   const pace = select('new-per-day', PER_DAY.map((n) => [n, `${n} คำ`]), app.settings.newPerDay, (v) => {
     set((st, s) => {
@@ -142,6 +146,7 @@ export function render(root, app) {
       field('theme', 'ธีม', select('theme', THEMES, app.settings.theme, (v) => { set((st) => { st.theme = v; }); app.applySettings(); }))),
     section('ข้อมูลในเครื่อง',
       h('p', { class: 'muted' }, th('ความก้าวหน้าเก็บอยู่ในเบราว์เซอร์ของเครื่องนี้ ถ้าใช้ iPhone ให้กด แชร์ > เพิ่มไปยังหน้าจอโฮม แล้วเปิดเกมจากไอคอนนั้น เพราะ Safari อาจล้างข้อมูลของเว็บที่ไม่ได้เปิดเกิน 7 วัน และสำรองข้อมูลเป็นไฟล์ไว้เป็นระยะ')),
+      persistNote,
       h('button', { class: 'btn btn-secondary', id: 'backup-btn', type: 'button', onclick: download }, th('สำรองข้อมูลเป็นไฟล์')),
       h('button', { class: 'btn btn-secondary', id: 'restore-btn', type: 'button', onclick: () => file.click() }, th('กู้คืนจากไฟล์')),
       file,

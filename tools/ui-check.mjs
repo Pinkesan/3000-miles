@@ -1,7 +1,7 @@
 // UI smoke test: drives headless Chrome through the app, saves screenshots to .shots/ and
 // reports JS errors. Starts its own server (port 0), so the game server on 5320 is left alone.
 //   npm run ui
-//   ONLY=home,card npm run ui   (scenes: home card words word settings backup drive types synonym score arcade map postcard arrive checkpoint streak resume done mobile dark light)   (Git Bash)   PowerShell: $env:ONLY='home'; npm run ui
+//   ONLY=home,card npm run ui   (scenes: home card words word settings backup drive types synonym score arcade map postcard arrive checkpoint streak resume done pwa mobile dark light)   (Git Bash)   PowerShell: $env:ONLY='home'; npm run ui
 // Option: CHROME=path/to/chrome.exe
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -825,6 +825,33 @@ try {
     check(!(await evaluate(`document.documentElement.scrollWidth > innerWidth`)), 'mobile home done: horizontal scroll');
     await viewport(1366, 768);
     await freshLoad(); // the next scenes expect a normal home
+  }
+
+  if (want('pwa')) {
+    // real boot without ?test: the service worker installs, then the game starts offline
+    const real = BASE.split('?')[0];
+    await send('Page.navigate', { url: real });
+    await waitFor(pageReady);
+    await evaluate(`navigator.serviceWorker.ready.then(() => true)`);
+    await waitFor(`!!navigator.serviceWorker.controller || (location.reload(), false)`);
+    await waitFor(`!!document.querySelector('.screen') && !!navigator.serviceWorker.controller`);
+    const manifest = await evaluate(`fetch(document.querySelector('link[rel=manifest]').href).then((r) => r.json())`);
+    check(manifest.short_name === '3000 Miles' && manifest.icons.length >= 3, 'pwa: manifest parses');
+    for (const icon of manifest.icons) {
+      check(await evaluate(`fetch(new URL(${JSON.stringify(icon.src)}, document.baseURI)).then((r) => r.ok && r.headers.get('content-type') === 'image/png')`), `pwa: icon ${icon.src} loads`);
+    }
+    check(await evaluate(`fetch(document.querySelector('link[rel=apple-touch-icon]').href).then((r) => r.ok)`), 'pwa: apple touch icon loads');
+    check(await evaluate(`caches.keys().then((k) => k.some((n) => n.startsWith('3000-miles-')))`), 'pwa: precache exists');
+    await send('Network.enable');
+    await send('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0 });
+    await send('Page.navigate', { url: real });
+    await waitFor(`!!document.querySelector('.screen') && !!document.querySelector('.odometer')`);
+    check(await evaluate(`!document.querySelector('.boot-error')`), 'pwa: offline reload renders home, not the boot error');
+    await shot('pwa-offline-home');
+    await send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+    await evaluate(`navigator.serviceWorker.getRegistrations().then((rs) => Promise.all(rs.map((r) => r.unregister())))`);
+    await evaluate(`caches.keys().then((ks) => Promise.all(ks.map((k) => caches.delete(k))))`);
+    await freshLoad();
   }
 
   if (want('mobile')) {

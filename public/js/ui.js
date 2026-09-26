@@ -35,10 +35,12 @@ export function setChildren(el, ...children) {
 export const th = (text, props = {}) => h('span', { lang: 'th', ...props }, text);
 export const en = (text, props = {}) => h('span', { lang: 'en', ...props }, text);
 
-export function toast(message, kind = 'info', ms = 4500) {
+// `action` adds a button: { label, onclick }.
+export function toast(message, kind = 'info', ms = 4500, action = null) {
   const box = document.getElementById('toasts');
   if (!box) return;
-  const item = h('div', { class: `toast toast-${kind}`, role: kind === 'error' ? 'alert' : 'status', lang: 'th' }, message);
+  const item = h('div', { class: `toast toast-${kind}`, role: kind === 'error' ? 'alert' : 'status', lang: 'th' }, message,
+    action && h('button', { class: 'toast-action', type: 'button', onclick: action.onclick }, action.label));
   box.append(item);
   setTimeout(() => {
     item.classList.add('toast-out');

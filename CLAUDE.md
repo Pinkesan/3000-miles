@@ -80,6 +80,7 @@ parts of `speech.js`, the CDP harness in `tools/ui-check.mjs`.
 ## Definition of done (every item)
 
 - `npm test` passes, with new tests for new pure logic.
+- `public/` changed (not only `public/data/`): bump the version in `package.json`, `public/js/version.js` and `public/sw.js` (a test checks they match), and keep `FILES` in `sw.js` complete (a test checks). Content steps need no bump but the site must be uploaded again (docs/DEPLOY.md).
 - App changed: `npm run ui` → `JS errors: none`; look at the changed screens at 390×844 and
   1366×768.
 - Content changed: `npm run check` shows no errors for those batches; `npm run build:data` ran.
