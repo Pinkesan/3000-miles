@@ -17,7 +17,6 @@
 >   โจทย์ฟังแล้วพิมพ์ คำใบ้สั้นลงเมื่อจำได้แม่นขึ้น
 > - **Step 7** คะแนน คอมโบ (ตอบถูกติดกันได้ตัวคูณ) แถบความเร็ว และดาว 1–3 ดวงต่อช่วง
 > - **Step 9** ด่านตรวจทุกเมือง: สอบพิมพ์ 15 คำ ถูก 80% ถึงได้โปสการ์ด สอบได้วันละครั้ง
-> - คำศัพท์ระดับ A2 / B1 / B2 มาก่อน A1 ที่เหลือ หลังทำ C1 แล้วให้ตั้ง **เริ่มจากระดับ** ที่หน้าแรกเป็น A2 หรือ B1
 >
 > **ปรับแผนรอบสอง (Opus, 2026-09-25): จำกัดคำใหม่ แต่ไม่จำกัดการเล่น**
 > - คำใหม่ทุกคำต้องกลับมาทวนอีก 5–8 ครั้ง ถ้าเรียน 100 คำในวันเดียว คำทวนจะเพิ่มเป็นสองเท่าไปอีกสองสัปดาห์
@@ -25,6 +24,13 @@
 > - **Highway Rush** (ตอบเร็ว 60 วินาที ไม่เพิ่มคำใหม่ ไม่กระทบตารางทวน) ย้ายมาทำต่อจาก Step 7
 >   เปิดให้เล่นได้ไม่จำกัดหลังขับครบแผนของวัน
 > - คำใหม่ต่อวันตั้งไว้ 10 หรือ 15 คำพอ เกินนั้นแทบไม่ถึงเร็วขึ้น เพราะคำทวนจะค้างเกิน 100 คำบ่อย
+>
+> **ปรับแผนรอบสาม (Opus, 2026-09-26): เรียนทีละระดับ**
+> - คำใหม่มาตามลำดับ A1 → A2 → B1 → B2 เลือกระดับเริ่มต้นหรือข้ามระดับไม่ได้แล้ว (ตัดตัวเลือกในตั้งค่า และตัด Step 14 Fast Lane)
+>   คำที่รู้อยู่แล้วตอบถูก 2 ข้อก็ได้ไมล์ทันที หน้าแรกบอกว่าอยู่ระดับไหน เช่น "ระดับ A1 · เริ่มแล้ว 0 / 900 คำ"
+> - จำลองการเล่น 240 วัน วันละ 10 คำ: ไมล์รวมแทบเท่าเดิม แต่ถ้าเรียนไม่ทันครบ ส่วนที่ขาดจะเป็น B2 แทน A2
+>   ช่วงแรกได้ไมล์เร็วกว่า และยิ่งขับไปทางตะวันตกคำยิ่งยาก
+> - เนื้อหาเขียนตามลำดับระดับด้วย: C4–C5 คือ A1 ที่เหลือ แล้วค่อย A2, B1, B2
 >
 > **ทดสอบหลายวันโดยไม่แตะเซฟจริง:** เปิดหน้าต่างไม่ระบุตัวตน (Ctrl+Shift+N) แล้วเข้า
 > `http://localhost:5320/?test&today=20721` (20721 คือ 25 ก.ย. 2569) เปลี่ยนเลขเพื่อข้ามวัน ปิดหน้าต่างแล้วข้อมูลทดสอบหายเอง
@@ -51,14 +57,15 @@
 - [x] **C3.** Content a2-03, b1-03, b2-03
 - [x] **Step 10.** Word list, word detail, settings, backup → [steps/10-words-settings.md](steps/10-words-settings.md)
 - [x] **Step 11.** Install on the phone: PWA, offline, deploy → [steps/11-pwa-deploy.md](steps/11-pwa-deploy.md)
-- [ ] **C4.** Content a2-04, b1-04, b2-04
-- [ ] **C5.** Content a2-05, b1-05, b2-05
-- [ ] **C6.** Content a2-06, b1-06, b2-06
+- [x] **Plan change 3.** One level at a time: A1 → B2 in order, no start level, Step 14 dropped, content in level order. Done with Opus on 2026-09-26.
+- [ ] **C4.** Content a1-02 … a1-05
+- [ ] **C5.** Content a1-06 … a1-09
+- [ ] **C6.** Content a2-04, a2-05, a2-06
 - [ ] **Step 13.** Say it: speaking question type (optional) → [steps/13-say-it.md](steps/13-say-it.md)
-- [ ] **C7.** Content a2-07, a2-08, b1-07
-- [ ] **C8.** Content a1-02 … a1-05
-- [ ] **C9.** Content a1-06 … a1-09
-- [ ] **Step 14.** Fast Lane: skip a level you already know → [steps/14-fast-lane.md](steps/14-fast-lane.md)
+- [ ] **C7.** Content a2-07, a2-08, b1-04
+- [ ] **C8.** Content b1-05, b1-06, b1-07
+- [ ] **C9.** Content b2-04, b2-05, b2-06
+- ~~**Step 14.** Fast Lane: skip a level you already know~~ Dropped in Plan change 3: levels come in order (DESIGN §1 rule 10).
 - [ ] **Step 15.** Fix reported words + portfolio polish → [steps/15-polish.md](steps/15-polish.md)
 
 ## Prompt สำหรับเริ่ม session
@@ -99,6 +106,20 @@ Token economy:
 
 ## Log
 
+- 2026-09-26: Plan change 3 (Opus). The player asked for one level at a time instead of
+  a start-level setting and a level skip. A 240-day simulation with `plan.js` + `srs.js`
+  (10 new words a day, a player who knows 85/60/35/20% of A1/A2/B1/B2; stronger and weaker
+  players agree): fixed order 2,362 miles against 2,382 starting at B1, but what is missing
+  on day 240 is B2 instead of 600 A2 words; more miles in the first 90 days (1,497 against
+  1,212 with the extra leg every day); 62 reviews a day against 70. DESIGN §1 rule 10, §3,
+  §5 intro order, §7 (home level line, settings note; start-level tip and `#/fastlane`
+  gone), §10 (`startLevel` dropped, no `fastlane`). Code: `introOrder(words, seed)` always
+  A1 → B2 (the order inside a level is unchanged), new pure `plan.currentLevel` for the home
+  `#level-line`, the settings select and `summary.levelTip` removed, `normalizeState` drops
+  `settings.startLevel`; version 0.3.0; 141 tests pass; ui-check `home` (level line, level
+  order, an old start level ignored) and `settings` updated, `JS errors: none`. Step 14
+  (Fast Lane) dropped and its step file deleted; content steps follow the levels now (C4–C5
+  the rest of A1, then A2, B1, B2; CONTENT-GUIDE table).
 - 2026-09-26: Step 11. `public/img/icon.svg` + `tools/make-icons.mjs` (PNGs: 192, 512, maskable, apple-touch, favicon), `manifest.webmanifest`, `sw.js` (precache `FILES`, cache first, `data/*.json` network first, old caches deleted, `skipWaiting` message), registration + update toast (`toast` got an optional action button) in `main.js`, version 0.2.0, `test/pwa.test.mjs` (140 tests pass), ui-check scene `pwa` (installs the worker, reloads offline, manifest and icons load); `JS errors: none`. Settings shows whether storage is persistent. `docs/DEPLOY.md` (Thai). Deviations: persistence is read with `navigator.storage.persisted()` when settings opens, not stored in settings; the deploy itself is left to the user (no account touched), Netlify is the documented path.
 - 2026-09-26: Step 10. New pure `wordlist.js` (`filterWords/chipCounts/nextReviewText`), `plan.withNewPerDay`, `version.js`; store `exportData/importData/reset`; router passes `query`; screens `#/words` (search, level + status chips in the hash query via replaceState, pages of 100), `#/word/<id>` (detail, box gauge, next review, flag with note), `#/settings` (pace + time line, start level, voice/rate/autoplay/sound/theme, backup, restore, reset, about); `components/wordrow.js` links words on results, postcards, checkpoint and Rush missed lists and the mini card to `#/word/<id>`; home lost the temporary selects and links to words + settings. ui-check: scenes `words word settings backup`, three screens in `mobile`/`dark`/`light`; `JS errors: none`. 137 tests pass. Deviations: the start-level tip links to settings; the word page back link uses history.back() so the list keeps its filters.
 - 2026-09-26: C3. `content/{a2-03,b1-03,b2-03}.json` (300 words, `npm run check` 0 errors 0 warnings each); `build:data` → 1000 words (A1 100, A2 300, B1 300, B2 300); 128 tests pass. No deviations.

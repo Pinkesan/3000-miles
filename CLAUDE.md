@@ -52,8 +52,8 @@ parts of `speech.js`, the CDP harness in `tools/ui-check.mjs`.
 
 ## Rules that are easy to break
 
-1. Pure modules (`rng day srs text quiz plan progress summary`, later `score checkpoint
-   arcade fastlane`) never touch DOM, storage or `Date.now()`; `today` and `rnd` are
+1. Pure modules (`rng day srs text quiz plan progress summary score checkpoint arcade
+   wordlist`) never touch DOM, storage or `Date.now()`; `today` and `rnd` are
    parameters; inputs aren't mutated.
 2. A screen's `render(root, app, params)` is synchronous and may return `{ destroy() }`;
    async work checks a `destroyed` flag.

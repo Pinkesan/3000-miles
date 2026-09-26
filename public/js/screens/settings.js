@@ -1,9 +1,8 @@
-// #/settings: pace, start level, voice, sound, theme, backup, reset, about (DESIGN §7, §10, §11).
+// #/settings: pace, voice, sound, theme, backup, reset, about (DESIGN §7, §10, §11).
 import { h, setChildren, th, en, toast, confirmBox } from '../ui.js';
 import { icons } from '../icons.js';
-import { introOrder, withNewPerDay } from '../plan.js';
+import { withNewPerDay } from '../plan.js';
 import { englishVoices, loadVoices } from '../speech.js';
-import { LEVELS } from '../wordlist.js';
 import { VERSION } from '../version.js';
 
 const PER_DAY = [5, 10, 15, 20, 30];
@@ -51,12 +50,6 @@ export function render(root, app) {
   });
   paintPace();
 
-  const level = select('start-level', LEVELS.map((lv) => [lv, `${lv} · ${app.words.filter((w) => w.lv === lv).length} คำ`]),
-    app.settings.startLevel, (v) => {
-      set((st) => { st.startLevel = v; });
-      app.order = introOrder(app.words, v);
-    });
-
   const voice = h('select', { id: 'voice', class: 'select' });
   const paintVoices = (list) => {
     const en_ = englishVoices(list);
@@ -100,7 +93,6 @@ export function render(root, app) {
   });
 
   function afterReplace() {
-    app.order = introOrder(app.words, app.settings.startLevel);
     app.applySettings();
     location.hash = '#/';
   }
@@ -134,8 +126,7 @@ export function render(root, app) {
     h('h1', { class: 'results-title' }, th('ตั้งค่า')),
     section('การเรียน',
       field('new-per-day', 'คำใหม่ต่อวัน', pace), paceNote,
-      field('start-level', 'ระดับเริ่มต้น', level),
-      h('p', { class: 'muted' }, th('คำใหม่ช่วงต่อไปจะเริ่มจากระดับนี้'))),
+      h('p', { class: 'muted', id: 'level-note' }, th('คำใหม่มาทีละระดับ A1, A2, B1 แล้ว B2 คำที่รู้อยู่แล้วจะผ่านไปเร็ว'))),
     section('เสียง',
       field('voice', 'เสียงอ่าน', voice),
       testVoice,

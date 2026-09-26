@@ -7,7 +7,7 @@ import { odometer } from '../components/odometer.js';
 import { newLeft } from '../plan.js';
 import { arcadeOpen } from '../arcade.js';
 import { gradedToday } from '../srs.js';
-import { legSummary, tankText, tankFill, levelTip } from '../summary.js';
+import { legSummary, tankText, tankFill } from '../summary.js';
 import * as sfx from '../sfx.js';
 import { wordItem } from '../components/wordrow.js';
 
@@ -52,7 +52,6 @@ export function render(root, app) {
   const canExtra = planDone && wordsLeft;
 
   const canRush = !canContinue && !canExtra && arcadeOpen(cards, plan);
-  const tip = plan ? levelTip(plan, app.settings.startLevel) : null;
   const words = last.ids.map((id) => byId.get(id)).filter(Boolean);
   setChildren(
     root,
@@ -84,11 +83,6 @@ export function render(root, app) {
       stat(sum.reviewed, 'ทวน'),
     ),
     plan ? h('p', { class: 'today-line', id: 'tank-line' }, th(tankText(plan))) : null,
-    tip
-      ? h('p', { class: 'today-line level-tip', id: 'level-tip' },
-          th(`คำใหม่วันนี้รู้อยู่แล้ว ${tip.known} จาก ${tip.total} คำ ลองเริ่มจากระดับที่สูงขึ้น `),
-          h('a', { href: '#/settings' }, th('เปลี่ยนได้ที่ตั้งค่า')))
-      : null,
     h('div', { class: 'results-actions' },
       canContinue ? h('a', { class: 'btn btn-primary btn-main', href: '#/drive', id: 'again-btn' }, th('ขับต่อ')) : null,
       canExtra ? h('a', { class: 'btn btn-primary btn-main', href: '#/drive', id: 'again-btn' }, th('ขับเพิ่ม')) : null,

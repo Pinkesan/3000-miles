@@ -111,15 +111,18 @@ glosses; the same `th` as another entry in the batch.
 | C1 | a2-01 b1-01 b2-01 | 300 |
 | C2 | a2-02 b1-02 b2-02 | 300 |
 | C3 | a2-03 b1-03 b2-03 | 300 |
-| C4 | a2-04 b1-04 b2-04 | 300 |
-| C5 | a2-05 b1-05 b2-05 | 300 |
-| C6 | a2-06 b1-06 b2-06 | 300 |
-| C7 | a2-07 a2-08 b1-07 | 300 |
-| C8 | a1-02 a1-03 a1-04 a1-05 | 400 |
-| C9 | a1-06 a1-07 a1-08 a1-09 | 400 |
+| C4 | a1-02 a1-03 a1-04 a1-05 | 400 |
+| C5 | a1-06 a1-07 a1-08 a1-09 | 400 |
+| C6 | a2-04 a2-05 a2-06 | 300 |
+| C7 | a2-07 a2-08 b1-04 | 300 |
+| C8 | b1-05 b1-06 b1-07 | 300 |
+| C9 | b2-04 b2-05 b2-06 | 300 |
 
-The player knows most A1 words, so A2, B1 and B2 come first, and each step adds words at
-all three of those levels (the start-level setting can then point at any of them). Steps
-with B-level batches have three batches because those words need more care. Write the
-batches in the order of the table. If a session runs long, stop after a finished batch,
-log what is left, and let the next session continue the step.
+C1–C3 wrote A2, B1 and B2 first, while the player could still choose a start level. Since
+Plan change 3 (DESIGN §1 rule 10) new words come one level at a time, so the rest is written
+in level order: A1, then A2, B1, B2. Keep the content ahead of the player: when the written
+words of a level run out, the game moves on to the next level and comes back when more
+words of the lower level arrive. Steps with B-level batches have three batches because
+those words need more care. Write the batches in the order of the table. If a session runs
+long, stop after a finished batch, log what is left, and let the next session continue the
+step.

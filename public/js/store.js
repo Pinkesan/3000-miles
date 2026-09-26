@@ -3,12 +3,11 @@ export const KEY = 'miles3000.v1';
 export const APP = '3000-miles';
 
 export const DEFAULT_SETTINGS = {
-  newPerDay: 10, startLevel: 'A1', voice: '', rate: 0.9, autoplay: true, sound: true, theme: 'auto',
+  newPerDay: 10, voice: '', rate: 0.9, autoplay: true, sound: true, theme: 'auto',
 };
 
 const CHOICES = {
   newPerDay: [5, 10, 15, 20, 30],
-  startLevel: ['A1', 'A2', 'B1', 'B2'],
   theme: ['auto', 'light', 'dark'],
 };
 
@@ -39,7 +38,6 @@ function normalizeSettings(s) {
   const pick = (key) => (CHOICES[key].includes(src[key]) ? src[key] : d[key]);
   return {
     newPerDay: pick('newPerDay'),
-    startLevel: pick('startLevel'),
     theme: pick('theme'),
     voice: typeof src.voice === 'string' ? src.voice : d.voice,
     rate: Number.isFinite(src.rate) && src.rate >= 0.5 && src.rate <= 1.5 ? src.rate : d.rate,

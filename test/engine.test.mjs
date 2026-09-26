@@ -385,20 +385,38 @@ test('quiz: synonymOf finds another word with an overlapping meaning', () => {
 
 // ---- plan -------------------------------------------------------------------------------
 
-const SETTINGS = { newPerDay: 10, startLevel: 'A1' };
+const SETTINGS = { newPerDay: 10 };
 
-test('plan: introOrder starts at startLevel and is stable for a seed', () => {
-  const a1 = plan.introOrder(WORDS, 'A1');
-  assert.equal(a1.length, WORDS.length);
-  assert.ok(a1.slice(0, 8).every((id) => BY_ID[id].lv === 'A1'));
-  assert.deepEqual(a1, plan.introOrder(WORDS, 'A1'));
-  assert.notDeepEqual(a1, plan.introOrder(WORDS, 'A1', 'other-seed'));
-  const a2 = plan.introOrder(WORDS, 'A2');
-  assert.ok(a2.slice(0, 4).every((id) => BY_ID[id].lv === 'A2'));
-  assert.ok(a2.slice(4).every((id) => BY_ID[id].lv === 'A1'));
+test('plan: introOrder goes one level at a time and is stable for a seed', () => {
+  const order = plan.introOrder(WORDS);
+  assert.equal(order.length, WORDS.length);
+  assert.ok(order.slice(0, 8).every((id) => BY_ID[id].lv === 'A1'));
+  assert.ok(order.slice(8).every((id) => BY_ID[id].lv === 'A2'));
+  assert.deepEqual(order, plan.introOrder(WORDS));
+  assert.notDeepEqual(order, plan.introOrder(WORDS, 'other-seed'));
   // the order of a subset agrees with the full order
-  const subset = WORDS.filter((w) => w.lv === 'A1' && w.id !== 'w2');
-  assert.deepEqual(plan.introOrder(subset, 'A1'), a1.filter((id) => id !== 'w2' && BY_ID[id].lv === 'A1'));
+  const subset = WORDS.filter((w) => w.id !== 'w2');
+  assert.deepEqual(plan.introOrder(subset), order.filter((id) => id !== 'w2'));
+  // the level order doesn't depend on the input order
+  const mixed = [{ id: 'z', lv: 'B2' }, { id: 'y', lv: 'B1' }, { id: 'x', lv: 'A2' }, { id: 'w', lv: 'A1' }];
+  assert.deepEqual(plan.introOrder(mixed), ['w', 'x', 'y', 'z']);
+});
+
+test('plan: currentLevel follows the next new word, then waits for content', () => {
+  const levels = { A1: 900, A2: 800, B1: 700, B2: 600 };
+  const order = plan.introOrder(WORDS);
+  assert.deepEqual(plan.currentLevel(order, {}, BY_ID, levels), { lv: 'A1', met: 0, total: 900 });
+  const a1 = Object.fromEntries(order.slice(0, 3).map((id) => [id, card()]));
+  assert.deepEqual(plan.currentLevel(order, a1, BY_ID, levels), { lv: 'A1', met: 3, total: 900 });
+  // the A1 words with content are all met: new words come from A2 (the rest of A1 has no content yet)
+  const allA1 = Object.fromEntries(order.slice(0, 8).map((id) => [id, card()]));
+  assert.deepEqual(plan.currentLevel(order, allA1, new Map(Object.entries(BY_ID)), levels), { lv: 'A2', met: 0, total: 800 });
+  // every word with content is met: the first level that isn't complete
+  const all = Object.fromEntries(order.map((id) => [id, card()]));
+  assert.deepEqual(plan.currentLevel(order, all, BY_ID, levels), { lv: 'A1', met: 8, total: 900 });
+  assert.equal(plan.currentLevel(order, all, BY_ID, { A1: 8, A2: 4, B1: 0, B2: 0 }), null, 'every level complete');
+  // cards of words without content don't count
+  assert.deepEqual(plan.currentLevel(order, { gone: card() }, BY_ID, levels), { lv: 'A1', met: 0, total: 900 });
 });
 
 test('plan: makeDayPlan sorts due words and caps them at 100', () => {
@@ -807,7 +825,7 @@ test('plan: smoke test of a whole leg on the real words.json', () => {
   const data = JSON.parse(readFileSync(new URL('../public/data/words.json', import.meta.url), 'utf8'));
   const words = data.words;
   const byId = new Map(words.map((w) => [w.id, w]));
-  const order = plan.introOrder(words, 'A1');
+  const order = plan.introOrder(words);
   const rnd = makeRng(7);
   let cards = {};
   let p = plan.makeDayPlan(cards, TODAY, { newPerDay: 10 });

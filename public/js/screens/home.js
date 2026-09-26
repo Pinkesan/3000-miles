@@ -7,7 +7,7 @@ import { openCheckpoint, canTry } from '../checkpoint.js';
 import { tankFill, tankText } from '../summary.js';
 import { odometer } from '../components/odometer.js';
 import { gauge } from '../components/gauge.js';
-import { newLeft } from '../plan.js';
+import { newLeft, currentLevel } from '../plan.js';
 import { arcadeOpen, arcadeUnlocked } from '../arcade.js';
 
 // Rests are small P (parking) signs, at most 2.
@@ -40,6 +40,7 @@ export function render(root, app) {
   const rushUnlocked = arcadeUnlocked(store.state.cards);
   const rushBest = store.state.arcade.best;
   const mainLabel = hasLeg ? 'ขับต่อ' : planDone ? 'ขับเพิ่ม' : plan.legs > 0 ? 'ขับต่อ' : 'ออกเดินทาง';
+  const level = currentLevel(app.order, store.state.cards, app.byId, app.levels);
 
   setChildren(
     root,
@@ -62,6 +63,9 @@ export function render(root, app) {
       h('div', { class: 'tank-text' },
         h('p', { class: 'today-line', id: 'plan-line' }, th(planLine)),
         h('p', { class: 'muted', id: 'tank-line' }, th(tankText(plan))),
+        level
+          ? h('p', { class: 'muted', id: 'level-line' }, th('ระดับ '), en(level.lv), th(` · เริ่มแล้ว ${level.met} / ${level.total} คำ`))
+          : null,
       ),
     ),
     h('p', { class: 'today-line streak-line', id: 'streak-line' },

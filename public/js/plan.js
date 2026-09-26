@@ -17,19 +17,32 @@ const LEVELS = ['A1', 'A2', 'B1', 'B2'];
 
 const wordOf = (byId, id) => (byId instanceof Map ? byId.get(id) : byId[id]);
 
-// Levels from startLevel up to B2, then the lower ones. Inside a level the order is a
+// One level at a time: A1, A2, B1, B2 (DESIGN §1 rule 10). Inside a level the order is a
 // seeded shuffle: sorting by a hash of seed + id keeps it stable while more words get content.
-export function introOrder(words, startLevel = 'A1', seed = '3000-miles') {
-  const s = Math.max(0, LEVELS.indexOf(startLevel));
-  const levels = [...LEVELS.slice(s), ...LEVELS.slice(0, s)];
+export function introOrder(words, seed = '3000-miles') {
   const key = new Map(words.map((w) => [w.id, hashSeed(`${seed}:${w.id}`)]));
   const out = [];
-  for (const lv of levels) {
+  for (const lv of LEVELS) {
     const ids = words.filter((w) => w.lv === lv).map((w) => w.id);
     ids.sort((a, b) => key.get(a) - key.get(b) || (a < b ? -1 : 1));
     out.push(...ids);
   }
   return out;
+}
+
+// The level new words come from now (home, DESIGN §7): the level of the next word in `order`
+// without a card; when every word with content has one, the first level that isn't complete
+// (it waits for content). `levels` = words per level in the whole list ({ A1: 900, ... }).
+// Returns { lv, met, total } (met = words of that level with a card), or null when all are met.
+export function currentLevel(order, cards, byId, levels) {
+  const met = Object.fromEntries(LEVELS.map((lv) => [lv, 0]));
+  for (const id in cards) {
+    const lv = wordOf(byId, id)?.lv;
+    if (lv in met) met[lv]++;
+  }
+  const next = order.find((id) => !cards[id]);
+  const lv = next ? wordOf(byId, next)?.lv : LEVELS.find((l) => met[l] < (levels[l] ?? 0));
+  return lv ? { lv, met: met[lv], total: Math.max(levels[lv] ?? 0, met[lv]) } : null;
 }
 
 export function makeDayPlan(cards, today, settings = {}) {

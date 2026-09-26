@@ -97,7 +97,7 @@ async function boot() {
 
   const app = {
     words, byId, total: data.total, levels: data.levels, store, testMode, route: routeData,
-    order: introOrder(words, store.state.settings.startLevel),
+    order: introOrder(words),
     get settings() { return store.state.settings; },
     today: () => fixedToday ?? dayNumber(new Date()),
     rnd: (tail = '') => makeRng(`${seed}:${tail}`),

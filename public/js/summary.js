@@ -32,15 +32,6 @@ export function tankText(plan) {
   return `ถังน้ำมันวันนี้ ${Math.round(fill * 100)}%`;
 }
 
-// Start-level tip (DESIGN §7): at least 5 new words resolved today, at least 80% of them
-// known, and not already starting at B2. Returns { known, total } or null.
-export function levelTip(plan, startLevel) {
-  const known = plan?.known || 0;
-  const total = known + (plan?.taught || 0);
-  if (startLevel === 'B2' || total < 5 || known * 5 < total * 4) return null;
-  return { known, total };
-}
-
 // The unique word ids of a leg queue, in order.
 export function queueIds(queue) {
   return [...new Set(queue.map((x) => x.id))];

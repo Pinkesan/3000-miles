@@ -344,8 +344,16 @@ try {
     await setHash('#/');
     check(await evaluate(`!!document.querySelector('.odometer') && !!document.querySelector('#main-btn')`), 'home: odometer and main button');
     check(await evaluate(`document.querySelector('#ready')?.textContent.includes('/3000')`), 'home: ready count');
+    check(await evaluate(`document.querySelector('#level-line')?.textContent === 'ระดับ A1 · เริ่มแล้ว 0 / 900 คำ'`), 'home: level line starts at A1');
     await shot('home');
     check(await evaluate(`!document.querySelector('#new-per-day') && !!document.querySelector('#words-link') && !!document.querySelector('#settings-link')`), 'home: links to words and settings, no temporary selects');
+    check(await evaluate(`(() => { const lv = __app.app.order.map((id) => __app.app.byId.get(id).lv); return lv[0] === 'A1' && lv.every((l, i) => i === 0 || lv[i - 1] <= l); })()`), 'home: new words come one level at a time');
+    // every A1 word with content has a card: new words come from A2 until more A1 content arrives; an old start level is ignored
+    const a1Cards = Object.fromEntries(words.filter((w) => w.lv === 'A1').map((w) => [w.id, { b: 1, d: 20510, g: 20499, n: 1, r: 1, l: 0 }]));
+    await loadWith({ cards: a1Cards, settings: { startLevel: 'B2' } });
+    check(await evaluate(`document.querySelector('#level-line')?.textContent.includes('A2 · เริ่มแล้ว 0 / 800')`), 'home: level line moves on to A2 when A1 content runs out');
+    check(await evaluate(`__app.app.byId.get(__app.app.order[0]).lv === 'A1' && !('startLevel' in __app.app.settings)`), 'home: an old start level is ignored');
+    await shot('home-level');
   }
 
   if (want('words')) {
@@ -410,10 +418,7 @@ try {
     check(await evaluate(`JSON.parse(localStorage.getItem('miles3000.v1')).days[20500].newTarget === 15`), "settings: today's plan follows newPerDay");
     check(await evaluate(`document.querySelector('#pace-note').textContent.includes('20 นาที')`), 'settings: pace time line');
     await change('new-per-day', '10');
-    await change('start-level', 'B1');
-    check((await saved()).startLevel === 'B1', 'settings: startLevel saved');
-    check(await evaluate(`__app.app.byId.get(__app.app.order[0]).lv === 'B1'`), 'settings: order changes at once');
-    await change('start-level', 'A1');
+    check(await evaluate(`!document.querySelector('#start-level') && document.querySelector('#level-note').textContent.includes('ทีละระดับ')`), 'settings: no start level; the level order is explained');
     await change('theme', 'dark');
     check(await evaluate(`document.documentElement.dataset.theme === 'dark' && getComputedStyle(document.body).backgroundColor === 'rgb(21, 23, 27)'`), 'settings: dark theme applies at once');
     await change('theme', 'light');

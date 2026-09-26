@@ -15,7 +15,9 @@ from New York to Santa Monica Pier. **Every word you really learn is one mile.**
   easy: the answer was on screen three cards before the question, "รู้จักคำนี้แล้ว" gave
   free miles, the options were unrelated words, and nothing was at stake. Rules 1, 3, 5, 7
   and 8 were rewritten on 2026-09-25. Rule 9 was added the same day, after the player drove
-  extra legs until the old cap of 100 new words a day and had nothing left to play.)
+  extra legs until the old cap of 100 new words a day and had nothing left to play. Rule 10
+  was added on 2026-09-26: the player asked for one level at a time instead of a start-level
+  setting and a level skip.)
 - Companion to *Journey to America* (`Desktop\ผลงาน\06-j1-quest`): that game ends at
   the airport (JFK), this road trip starts in New York.
 - Learning rules the game is built on. Don't break them:
@@ -40,6 +42,16 @@ from New York to Santa Monica Pier. **Every word you really learn is one mile.**
      (§5) blocks new words on many days without getting there much sooner. So new words
      are capped per day (the plan plus one extra leg, §5). Play that adds no new words and
      never touches cards (Highway Rush, after the day's plan) has no limit.
+  10. **One level at a time.** New words come in level order, A1 → A2 → B1 → B2. There is
+     no start-level setting and no way to skip a level: known words already go fast (rule 7,
+     two right answers and they are miles). Simulated with the game's own `plan.js` +
+     `srs.js` (2026-09-26, 240 days at 10 new words a day, a player who knows 85/60/35/20% of
+     A1/A2/B1/B2 words; stronger and weaker players point the same way): the order barely
+     changes the miles (2,362, against 2,382 when starting at B1), but it decides what is
+     still missing when time runs out (B2, instead of 600 A2 words), gives more miles early
+     (known A1 words are miles at once), fewer reviews (62 a day against 70), and a road
+     that gets harder going west: A1 ≈ New York to Chicago, A2 ≈ on to Oklahoma, B1 ≈ on to
+     Flagstaff, B2 ≈ Grand Canyon to Santa Monica.
 
 ## §2 Words and content data
 
@@ -86,7 +98,7 @@ State per word: `state.cards[id]`. No entry = a new word.
   "m": 125,     // mile number (1..3000), set when it first reached box 3; never removed
   "md": 20508,  // day it became a mile
   "f": 1,       // flat tire: a mile word whose last graded answer was wrong (absent otherwise)
-  "k": 1 }      // known before any lesson: probe + confirm, or Fast Lane (absent otherwise)
+  "k": 1 }      // known before any lesson: probe + confirm (absent otherwise)
 ```
 
 - `INTERVAL = [0, 1, 2, 4, 7, 14, 30, 60, 120]`: days until due after **entering** box b.
@@ -203,9 +215,11 @@ and `exam` (a checkpoint question, §6). Seven question types.
 
 - **Day number:** `dayNumber(date, rolloverHour = 4)`: the local calendar date of
   `date − 4 h`, as `Date.UTC(y, m, d) / 86400000`. Playing at 1 a.m. counts for the day before.
-- **Intro order of new words:** levels from `settings.startLevel` up to B2, then the lower
-  levels; inside a level, a seeded shuffle (seed `"3000-miles"`) of the base order. Only
-  words with content and no card.
+- **Intro order of new words:** one level at a time, A1, A2, B1, B2 (§1 rule 10); inside a
+  level, a seeded shuffle (seed `"3000-miles"`) of the base order. Only words with content
+  and no card: while a level's content isn't all written, the next level's words come after
+  the ones that exist, and new content of a lower level comes first again. So content is
+  written in level order (CONTENT-GUIDE).
 - **Day plan** `state.days[today]`, made the first time the game opens on a day (a snapshot):
   - `due`: ids with `d <= today`, sorted by `d` then `b`, at most **100** (the rest wait).
   - `newTarget`: `settings.newPerDay` (5/10/15/20/30, default 10); **0** when more than
@@ -232,8 +246,7 @@ and `exam` (a checkpoint question, §6). Seven question types.
   - wrong probe, or ไม่รู้จักคำนี้ → the Meet card next, then its `check` item 4 items
     after the Meet card (or last);
   - right confirm → a known word, wrong confirm → a taught word (§3). Both count toward
-    `newTarget`: a player who knows many of the words finishes the day sooner, and the
-    results screen suggests a higher start level (§7).
+    `newTarget`: a player who knows many of the words finishes the day sooner.
 - **In a leg:** a wrong answer puts the same word, same type and hint back 3 items later
   (or last), at most 2 re-asks per word per leg. A probe is never re-asked: the lesson follows.
 - Leaving mid-leg keeps everything already answered; **ขับต่อ** resumes the saved leg.
@@ -316,21 +329,22 @@ Per leg, in `score.js`. None of it touches word state.
 
 | route | what |
 |---|---|
-| `#/` | Home: odometer; guide sign NEXT STOP · city · miles to go (CHECKPOINT · city with a barrier stripe while a checkpoint is open); fuel gauge + today's plan line; today's score and the records; main button (**ออกเดินทาง** first leg / **ขับต่อ** saved leg or plan not done / **ขับเพิ่ม** plan done and the one extra leg not driven yet); when nothing is left to drive today (`newLeft` false after the plan), a calm note replaces the main button: "วันนี้ขับครบแล้ว พรุ่งนี้มาขับต่อ" + "เรียนทีละน้อยทุกวัน จำได้นานกว่าเรียนรวดเดียว", with a primary **Highway Rush** button under it once unlocked; **เข้าด่าน** while a checkpoint is open and not tried today; streak + P signs; flat tires; links to map, words, settings, Highway Rush (once unlocked: its best score, or "เปิดเมื่อขับครบแผนวันนี้" while the day's plan isn't done); later Fast Lane. While content is incomplete: "คำที่พร้อมเล่น 900/3000". |
+| `#/` | Home: odometer; guide sign NEXT STOP · city · miles to go (CHECKPOINT · city with a barrier stripe while a checkpoint is open); fuel gauge + today's plan line + the level line (below); today's score and the records; main button (**ออกเดินทาง** first leg / **ขับต่อ** saved leg or plan not done / **ขับเพิ่ม** plan done and the one extra leg not driven yet); when nothing is left to drive today (`newLeft` false after the plan), a calm note replaces the main button: "วันนี้ขับครบแล้ว พรุ่งนี้มาขับต่อ" + "เรียนทีละน้อยทุกวัน จำได้นานกว่าเรียนรวดเดียว", with a primary **Highway Rush** button under it once unlocked; **เข้าด่าน** while a checkpoint is open and not tried today; streak + P signs; flat tires; links to map, words, settings, Highway Rush (once unlocked: its best score, or "เปิดเมื่อขับครบแผนวันนี้" while the day's plan isn't done). While content is incomplete: "คำที่พร้อมเล่น 900/3000". |
 | `#/drive` | The leg: top bar (exit, lane with a car that moves by answered/total, `n / total`, leg score, combo chip, mile chip), then the probe, Meet card or question, feedback panel. |
-| `#/results` | Leg summary: score and stars, best combo, records beaten, correct %, miles gained (odometer rolls), taught / known / reviewed, tank, buttons ขับต่อ / ขับเพิ่ม (the one extra leg) / **Highway Rush** (nothing left to drive, once unlocked) and กลับหน้าแรก; "ถึงด่านตรวจ <city> แล้ว" + **เข้าด่าน** if a stop was reached; the start-level tip (below). |
+| `#/results` | Leg summary: score and stars, best combo, records beaten, correct %, miles gained (odometer rolls), taught / known / reviewed, tank, buttons ขับต่อ / ขับเพิ่ม (the one extra leg) / **Highway Rush** (nothing left to drive, once unlocked) and กลับหน้าแรก; "ถึงด่านตรวจ <city> แล้ว" + **เข้าด่าน** if a stop was reached. |
 | `#/checkpoint/<id>` | A stop's exam (§6): intro (city, "15 คำ · ผ่าน 12 คำขึ้นไป · สอบได้วันละครั้ง", best stars, **เริ่มสอบ**), the questions, the end (x / n, stars, passed or not, missed words, **รับโปสการ์ด** / **กลับหน้าแรก**). |
 | `#/map` | Vertical road from New York (top) to Santa Monica (bottom), stops as mile markers, unlocked stops as postcard tiles with their checkpoint stars, a barrier at the open checkpoint, the car at the current position (it waits at an open checkpoint). |
 | `#/postcard/<id>` | Front: "Greetings from" + city in big block letters. Back: fact EN + TH (🔊), words earned on that part of the trip. |
 | `#/words` | Word list: search (English prefix or Thai text), filters by level and status, pages of 100. |
 | `#/word/<id>` | Word detail: everything about the word, box gauge 0–8, stats, next review, report a problem. |
-| `#/settings` | New words per day, start level, voice + test, speech rate, autoplay, sound, theme, backup/restore, reset, about. |
+| `#/settings` | New words per day (+ a note: new words come one level at a time, known words go fast), voice + test, speech rate, autoplay, sound, theme, backup/restore, reset, about. |
 | `#/arcade` | Highway Rush (Step 12): a 60-second run with three strikes over words that have a card, except words due today and not graded yet (no early reviews). Opens once 40 words have a card and today's plan is done; then it can be played as often as the player likes. Never touches cards (§1 rule 9). |
-| later | `#/fastlane` (Step 14). |
 
-- **Start-level tip** (results): when at least 5 new words were resolved today, at least 80%
-  of them were known, and the start level isn't B2: "คำใหม่วันนี้รู้อยู่แล้ว 8 จาก 10 คำ
-  ลองเริ่มจากระดับที่สูงขึ้น" with a link to the start-level setting.
+- **Level line** (home, under the tank line): "ระดับ A1 · เริ่มแล้ว 120 / 900 คำ" =
+  `currentLevel(order, cards, byId, levels)`: the level of the next new word in the intro
+  order; once every word with content has a card, the first level that isn't complete (it
+  waits for content). The numbers are that level's words with a card / its words in the
+  whole list (`words.json` `levels`). Hidden when every level is complete.
 
 ## §8 Visual design
 
@@ -410,7 +424,7 @@ localStorage key `miles3000.v1`:
 
 ```
 { "v": 1,
-  "settings": { "newPerDay": 10, "startLevel": "A1", "voice": "", "rate": 0.9,
+  "settings": { "newPerDay": 10, "voice": "", "rate": 0.9,
                 "autoplay": true, "sound": true, "theme": "auto" },
   "cards": { "<id>": { …§3 } },
   "days": { "<day>": { …§5 plan } },
@@ -422,12 +436,11 @@ localStorage key `miles3000.v1`:
   "exam": null,
   "records": { "combo": 0, "day": 0, "dayOn": null },
   "flags": { "<id>": { "day": <day>, "note": "" } },
-  "arcade": { "best": 0, "runs": [] },
-  "fastlane": { "<level>": <day> } }
+  "arcade": { "best": 0, "runs": [] } }
 ```
 
 - `normalizeState(saved)` fills anything missing; old saves must keep working. Never change
-  the key; add fields instead.
+  the key; add fields instead. A retired field is dropped: `settings.startLevel` (§1 rule 10).
 - Save after every graded answer. Keep `days` for 400 days; drop the `due`/`shown` arrays
   of past days.
 - Backup: `exportData()` → `{ "app": "3000-miles", "v": 1, "exportedAt", "data" }`, file

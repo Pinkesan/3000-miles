@@ -31,8 +31,14 @@ test('checkpoints and exam: fresh defaults, kept when valid, junk dropped', () =
 });
 
 test('unknown settings values fall back to defaults', () => {
-  const s = normalizeState({ settings: { newPerDay: 7, startLevel: 'C2', theme: 'pink', rate: 9, autoplay: 'yes', sound: 0, voice: 3 } });
+  const s = normalizeState({ settings: { newPerDay: 7, theme: 'pink', rate: 9, autoplay: 'yes', sound: 0, voice: 3 } });
   assert.deepEqual(s.settings, DEFAULT_SETTINGS);
+});
+
+test('an old save loses its start level (levels come in order, DESIGN §1 rule 10)', () => {
+  const s = normalizeState({ settings: { newPerDay: 15, startLevel: 'B1' } });
+  assert.equal(s.settings.newPerDay, 15);
+  assert.equal('startLevel' in s.settings, false);
 });
 
 test('does not share objects with the input', () => {
