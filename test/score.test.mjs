@@ -5,7 +5,7 @@ import { POINTS, speedFactor, comboMultiplier, scoreAnswer, legStars, updateReco
 const zero = { score: 0, combo: 0, bestCombo: 0 };
 
 test('POINTS per type (DESIGN §6)', () => {
-  assert.deepEqual(POINTS, { meaning: 10, listen: 10, word: 10, gap: 15, spell: 20, gapType: 25, dictation: 25 });
+  assert.deepEqual(POINTS, { meaning: 10, listen: 10, word: 10, gap: 15, spell: 20, gapType: 25, dictation: 25, say: 20 });
 });
 
 test('speedFactor: boundaries at 3000 and 6000 ms', () => {
@@ -17,7 +17,7 @@ test('speedFactor: boundaries at 3000 and 6000 ms', () => {
 });
 
 test('speedFactor: typed types never get a bonus', () => {
-  for (const t of ['spell', 'gapType', 'dictation']) assert.equal(speedFactor(t, 500), 1);
+  for (const t of ['spell', 'gapType', 'dictation', 'say']) assert.equal(speedFactor(t, 500), 1);
 });
 
 test('comboMultiplier: boundaries 4/5, 9/10, 19/20', () => {

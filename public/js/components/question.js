@@ -4,7 +4,8 @@
 import { h, setChildren, th, en } from '../ui.js';
 import { icons } from '../icons.js';
 import { POS_LABEL, blankGap, plain, posList } from '../text.js';
-import { synonymOf } from '../quiz.js';
+import { synonymOf, sayMatches } from '../quiz.js';
+import { listenOnce, MIC_ERRORS } from '../speech.js';
 import { exampleLine } from './wordcard.js';
 
 const CHEERS = ['ถูกต้อง', 'เยี่ยม', 'แม่นมาก'];
@@ -31,8 +32,9 @@ export function miniCard(app, word) {
 // opts: { tag, kind ('probe' shows no mini card; 'rush' no mini card and no button), canSkip, speedBar (drive only), onAnswer, onSkip, onNext, cheer }
 export function questionView(app, q, { tag, kind, canSkip = false, speedBar = false, onAnswer, onSkip, onNext, cheer = 0 }) {
   const { word } = q;
-  const typed = !q.options;
-  const state = { replays: 0, retried: false, input: null, form: null, list: null };
+  const saying = q.type === 'say'; // spoken answer; two misses or a mic error fall back to typing
+  const typed = !q.options && !saying;
+  const state = { replays: 0, retried: false, input: null, form: null, list: null, fallback: false, misses: 0, listener: null, mic: null, note: null, done: false };
   const pos = h('p', { class: 'q-pos', lang: 'en' }, posLabel(word));
 
   const prompt = [];
@@ -49,14 +51,21 @@ export function questionView(app, q, { tag, kind, canSkip = false, speedBar = fa
     prompt.push(h('p', { class: 'q-hint', lang: 'en', 'aria-label': label }, q.hint));
   }
 
-  let control;
-  if (typed) {
+  const typedControl = () => {
     state.input = h('input', {
       class: 'answer-input', type: 'text', autocomplete: 'off', autocapitalize: 'off', autocorrect: 'off',
       spellcheck: 'false', lang: 'en', enterkeyhint: 'done', 'aria-label': 'พิมพ์คำตอบ',
     });
-    control = state.form = h('form', { class: 'answer-form', onsubmit: submit },
+    state.form = h('form', { class: 'answer-form', onsubmit: submit },
       state.input, h('button', { class: 'btn btn-primary', type: 'submit' }, th('ตรวจคำตอบ')));
+    return state.form;
+  };
+  let control;
+  if (typed) control = typedControl();
+  else if (saying) {
+    state.mic = h('button', { class: 'mic-btn', type: 'button', 'aria-label': 'พูดคำตอบ', title: 'พูดคำตอบ', html: icons.mic, onclick: toggleMic });
+    state.note = h('p', { class: 'mic-note', 'aria-live': 'polite' }, th('กดไมค์ แล้วพูดคำภาษาอังกฤษ'));
+    control = h('div', { class: 'mic-wrap' }, state.mic, state.note);
   } else {
     const lang = q.type === 'word' || q.type === 'gap' ? 'en' : 'th';
     control = state.list = h('ol', { class: 'options' }, q.options.map((o, i) =>
@@ -69,17 +78,18 @@ export function questionView(app, q, { tag, kind, canSkip = false, speedBar = fa
     ? h('button', { class: 'btn btn-secondary btn-skip', type: 'button', onclick: () => onSkip?.() }, th('ไม่รู้จักคำนี้'))
     : null;
   // the speed bonus only exists for multiple choice (DESIGN §6); the bar drains over 6 s
-  const speed = speedBar && !typed ? h('div', { class: 'speed-bar', 'aria-hidden': 'true' }, h('i')) : null;
+  const speed = speedBar && !typed && !saying ? h('div', { class: 'speed-bar', 'aria-hidden': 'true' }, h('i')) : null;
+  const promptEl = h('div', { class: `prompt prompt-${q.type}` }, prompt);
   const el = h('div', { class: 'question' },
     h('p', { class: 'stage-tag' }, th(tag)),
-    h('div', { class: `prompt prompt-${q.type}` }, prompt), speed, control, skip, fb);
+    promptEl, speed, control, skip, fb);
 
   function submit(e) {
     e.preventDefault();
     const value = state.input.value;
     if (state.input.disabled || !value.trim()) return;
     // a synonym is not graded: one more try (DESIGN §4)
-    if (!state.retried && (q.type === 'spell' || q.type === 'gapType') && synonymOf(value, word, app.words)) {
+    if (!state.retried && (q.type === 'spell' || q.type === 'gapType' || state.fallback) && synonymOf(value, word, app.words)) {
       state.retried = true;
       state.input.value = '';
       setChildren(fb, h('p', { class: 'fb-retry' }, th('ความหมายใกล้เคียง แต่ยังไม่ใช่คำที่ต้องการ ลองอีกครั้ง')));
@@ -87,6 +97,50 @@ export function questionView(app, q, { tag, kind, canSkip = false, speedBar = fa
       return;
     }
     onAnswer(value);
+  }
+
+  // Say it: one try per tap of the mic; a miss shows what was heard, the second miss (or a mic
+  // error) turns the question into typing with the letter hint, graded as usual.
+  function toggleMic() {
+    if (!saying || state.fallback || state.done) return;
+    if (state.listener) { state.listener.stop(); return; }
+    app.stopSay();
+    const listener = listenOnce({ onResult: heard, onError: micError });
+    if (!listener) { micError('service-not-allowed'); return; }
+    state.listener = listener;
+    state.mic.classList.add('is-listening');
+    setChildren(state.note, th('กำลังฟัง… พูดได้เลย'));
+    setChildren(fb, []);
+  }
+
+  function listenDone() {
+    state.listener = null;
+    state.mic?.classList.remove('is-listening');
+  }
+
+  function heard(alts) {
+    listenDone();
+    if (state.done) return;
+    if (sayMatches(alts, word)) { onAnswer(q.accept[0]); return; }
+    state.misses += 1;
+    const said = alts[0] ? h('b', { lang: 'en' }, `“${alts[0]}”`) : null;
+    if (state.misses >= 2) { toTyping([th('ได้ยินว่า: '), said, th(' ยังไม่ใช่ ลองพิมพ์แทน')]); return; }
+    setChildren(state.note, th('กดไมค์แล้วลองพูดอีกครั้ง'));
+    setChildren(fb, h('p', { class: 'fb-retry' }, th('ได้ยินว่า: '), said, th(' ยังไม่ใช่ ลองอีกครั้ง')));
+  }
+
+  function micError(code) {
+    listenDone();
+    if (state.done) return;
+    toTyping([th(MIC_ERRORS[code] ?? 'ใช้ไมค์ไม่ได้ ให้พิมพ์คำตอบแทน')]);
+  }
+
+  function toTyping(message) {
+    state.fallback = true;
+    state.mic.parentNode.replaceWith(typedControl());
+    promptEl.append(h('p', { class: 'q-hint', lang: 'en', 'aria-label': `คำใบ้ ${q.fallbackHint}` }, q.fallbackHint));
+    setChildren(fb, h('p', { class: 'fb-retry' }, message));
+    focus();
   }
 
   // listen and dictation alternate slow / normal speed
@@ -101,7 +155,7 @@ export function questionView(app, q, { tag, kind, canSkip = false, speedBar = fa
   function start() {
     if (q.type === 'listen' || q.type === 'dictation') app.say(firstForm(word));
     else if (q.type === 'meaning' && app.settings.autoplay) app.say(firstForm(word));
-    focus();
+    if (!saying) focus();
   }
 
   function focus() {
@@ -111,6 +165,9 @@ export function questionView(app, q, { tag, kind, canSkip = false, speedBar = fa
   function paint(correct, response) {
     let answerText;
     let answerLang = 'en';
+    state.done = true;
+    state.listener?.abort();
+    listenDone();
     if (skip) skip.disabled = true;
     speed?.classList.add('speed-stop');
     if (q.options) {
@@ -127,9 +184,11 @@ export function questionView(app, q, { tag, kind, canSkip = false, speedBar = fa
       }
     } else {
       answerText = q.accept[0];
-      state.input.disabled = true;
-      state.input.classList.add(correct ? 'is-right' : 'is-wrong');
-      state.form.querySelector('button').disabled = true;
+      if (state.input) {
+        state.input.disabled = true;
+        state.input.classList.add(correct ? 'is-right' : 'is-wrong');
+        state.form.querySelector('button').disabled = true;
+      } else if (state.mic) state.mic.disabled = true;
     }
 
     const parts = [
@@ -152,5 +211,8 @@ export function questionView(app, q, { tag, kind, canSkip = false, speedBar = fa
     fb.querySelector('.btn-next')?.focus({ preventScroll: true });
   }
 
-  return { el, paint, replay, start, focus, skip };
+  // the screen calls this when it leaves the question: stop listening
+  function destroy() { state.done = true; state.listener?.abort(); }
+
+  return { el, paint, replay, start, focus, skip, toggleMic, destroy, get saying() { return saying && !state.fallback; } };
 }

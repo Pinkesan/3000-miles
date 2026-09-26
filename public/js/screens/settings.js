@@ -2,7 +2,7 @@
 import { h, setChildren, th, en, toast, confirmBox } from '../ui.js';
 import { icons } from '../icons.js';
 import { withNewPerDay } from '../plan.js';
-import { englishVoices, loadVoices } from '../speech.js';
+import { canListen, englishVoices, loadVoices } from '../speech.js';
 import { VERSION } from '../version.js';
 
 const PER_DAY = [5, 10, 15, 20, 30];
@@ -63,6 +63,24 @@ export function render(root, app) {
   const testVoice = h('button', { class: 'btn btn-secondary', id: 'voice-test', type: 'button' },
     h('span', { html: icons.speaker }), th('ทดลองฟัง'));
   testVoice.addEventListener('click', () => app.say('Welcome to the road trip'));
+
+  // Say it: hidden when the browser can't listen; the first time it is turned on, say where the audio goes
+  const sayField = canListen()
+    ? [field('say-mode', 'โหมดพูด (พูดคำตอบแทนการพิมพ์)', select('say-mode', ONOFF, app.settings.sayMode, async (v) => {
+      const el = document.getElementById('say-mode');
+      if (v === 'true' && !app.settings.sayNotice) {
+        const ok = await confirmBox({
+          title: 'เปิดโหมดพูด?',
+          body: 'Chrome และ Edge จะส่งเสียงที่คุณพูดไปให้บริการรู้จำเสียงของผู้พัฒนาเบราว์เซอร์ (Google หรือ Microsoft) เพื่อแปลงเป็นข้อความ เกมนี้ไม่เก็บเสียงไว้ ถ้าไม่ต้องการให้ปิดโหมดนี้',
+          ok: 'เปิด', cancel: 'ไม่เปิด',
+        });
+        if (!ok) { if (el) el.value = 'false'; return; }
+        set((st) => { st.sayNotice = true; });
+      }
+      set((st) => { st.sayMode = v === 'true'; });
+    })),
+    h('p', { class: 'muted', id: 'say-note' }, th('ใช้กับคำที่จำได้แม่นแล้ว พูดไม่ผ่านสองครั้งจะให้พิมพ์แทน ไม่เสียคำ'))]
+    : null;
 
   const file = h('input', { type: 'file', accept: 'application/json,.json', id: 'restore-file', hidden: true });
   file.addEventListener('change', async () => {
@@ -132,6 +150,7 @@ export function render(root, app) {
       testVoice,
       field('rate', 'ความเร็วเสียง', select('rate', RATES.map((r) => [r, r.toFixed(1)]), app.settings.rate, (v) => set((st) => { st.rate = Number(v); }))),
       field('autoplay', 'เล่นเสียงอัตโนมัติ', select('autoplay', ONOFF, app.settings.autoplay, (v) => set((st) => { st.autoplay = v === 'true'; }))),
+      sayField,
       field('sound', 'เสียงเอฟเฟกต์', select('sound', ONOFF, app.settings.sound, (v) => { set((st) => { st.sound = v === 'true'; }); app.applySettings(); }))),
     section('หน้าตา',
       field('theme', 'ธีม', select('theme', THEMES, app.settings.theme, (v) => { set((st) => { st.theme = v; }); app.applySettings(); }))),

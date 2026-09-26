@@ -9,6 +9,7 @@ import { scoreAnswer, comboMultiplier, legStars, updateRecords } from '../score.
 import { queueIds } from '../summary.js';
 import * as sfx from '../sfx.js';
 import { wordCard } from '../components/wordcard.js';
+import { canListen } from '../speech.js';
 import { questionView, advancesAlone } from '../components/question.js';
 
 const STAGE_TAG = { probe: 'คำใหม่ รู้จักไหม', confirm: 'เช็กว่ารู้จริง', reask: 'ลองอีกครั้ง' };
@@ -30,7 +31,7 @@ export function render(root, app) {
     const plan = app.ensurePlan();
     const built = buildLeg({
       plan, cards: store.state.cards, byId, order: app.order, today, extra: plan.done >= plan.goal,
-      rnd: app.rnd(`${today}:leg${plan.legs}`), caps: { canListen: app.hasVoice() },
+      rnd: app.rnd(`${today}:leg${plan.legs}`), caps: { canListen: app.hasVoice(), canSay: app.settings.sayMode && canListen() },
     });
     if (built.leg.queue.length) {
       leg = { ...built.leg, ids: queueIds(built.leg.queue) };
@@ -103,6 +104,7 @@ export function render(root, app) {
   function show() {
     if (destroyed) return;
     clearTimeout(timer);
+    cur?.view?.destroy?.();
     const item = legCurrent(leg);
     if (!item) return finish();
     const word = byId.get(item.id);
@@ -211,7 +213,9 @@ export function render(root, app) {
       return;
     }
     if (e.target instanceof HTMLInputElement) return;
-    if (e.key === ' ') {
+    if (e.key === ' ' && cur.view?.saying && !cur.answered) {
+      if (!(e.target instanceof HTMLButtonElement)) { e.preventDefault(); cur.view.toggleMic(); }
+    } else if (e.key === ' ') {
       const t = cur.q?.type;
       if (cur.item.kind === 'meet' || cur.answered || t === 'meaning' || t === 'listen') { e.preventDefault(); replay(); }
     } else if (e.key === '0' && cur.view?.skip && !cur.answered) skip();
@@ -227,6 +231,7 @@ export function render(root, app) {
   return {
     destroy() {
       destroyed = true;
+      cur?.view?.destroy?.();
       clearTimeout(timer);
       clearTimeout(plusTimer);
       document.removeEventListener('keydown', onKey);

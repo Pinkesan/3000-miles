@@ -144,12 +144,14 @@ and `exam` (a checkpoint question, §6). Seven question types.
 | 1 | word, listen | – |
 | 2 | gap, spell, dictation | full |
 | 3 | spell, gapType, dictation | full |
-| 4 | gapType, dictation | short |
-| 5–8 | gapType, spell, dictation | short |
+| 4 | gapType, dictation, say | short |
+| 5–8 | gapType, spell, dictation, say | short |
 | exam | spell, gapType, dictation | short |
 
 - `meaning` only appears as a probe. Typing starts on day one (the check or the confirm)
   and is the main diet from box 2.
+- `say` (Step 13) only exists when the setting โหมดพูด is on and the browser can listen
+  (`canListen()`); never in an `exam`. Without those it is dropped like the types below.
 - Drop types that can't be made: `listen` and `dictation` need TTS with an English voice;
   `gap` and `gapType` need `ex`. If nothing is left, use `spell` (`word` in box 1).
 - `gapOnly` words: `gap` in the multiple-choice rows (probe, box 1), `gapType` in all others.
@@ -164,6 +166,7 @@ and `exam` (a checkpoint question, §6). Seven question types.
 | gap | `ex` with the bracketed part replaced by `_____`, `exTh` under it | 4 English options (`w` of target and distractors) |
 | spell | `th` + POS label + letter hint | typed; matches `w`, any `alt`; `a, an` accepts `a` and `an` |
 | gapType | like gap + letter hint of the bracketed text | typed; matches the bracketed text |
+| say | `th` + POS label + a big mic button (Space also starts/stops); no hint | spoken, en-US, 5 alternatives: right when any one, after `norm`, equals an accepted spelling or contains it as a whole word. A miss shows what was heard and allows one more try; a second miss or a mic error turns the question into `spell` (full or short hint as the item says), graded as usual |
 | dictation | a big 🔊 button + POS label + `th` small and muted; spoken at once; replays like listen; no letter hint | typed; like spell |
 
 - `norm(s)` for typed answers: lowercase, trim, curly quotes to straight, collapse spaces,

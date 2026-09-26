@@ -1,5 +1,5 @@
 // Service worker: precaches the app shell, cache first; data/*.json network first. Bump VERSION with version.js.
-const VERSION = '0.3.0';
+const VERSION = '0.4.0';
 const CACHE = '3000-miles-' + VERSION;
 const FILES = [
   './',

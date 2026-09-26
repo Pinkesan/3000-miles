@@ -1,8 +1,8 @@
 // Score, combo and stars (DESIGN §6). Pure: no DOM, storage or clock; `ms` is a parameter.
 // None of it touches word state (DESIGN §1 rule 8).
 
-export const POINTS = { meaning: 10, listen: 10, word: 10, gap: 15, spell: 20, gapType: 25, dictation: 25 };
-const TYPED = new Set(['spell', 'gapType', 'dictation']);
+export const POINTS = { meaning: 10, listen: 10, word: 10, gap: 15, spell: 20, gapType: 25, dictation: 25, say: 20 };
+const TYPED = new Set(['spell', 'gapType', 'dictation', 'say']);
 
 // Only multiple-choice questions get a speed bonus.
 export function speedFactor(type, ms) {

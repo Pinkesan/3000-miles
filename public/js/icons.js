@@ -4,6 +4,7 @@ const svg = (body) =>
 
 export const icons = {
   speaker: svg('<path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>'),
+  mic: svg('<rect x="9" y="3" width="6" height="12" rx="3" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>'),
   car: svg('<path d="M3 15v-3l2-5h14l2 5v3M3 15h18M3 15v3h3v-3M18 15v3h3v-3"/><circle cx="7.5" cy="12.5" r="0.6" fill="currentColor"/><circle cx="16.5" cy="12.5" r="0.6" fill="currentColor"/>'),
   gear: svg('<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'),
   book: svg('<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5z"/><path d="M8 7h7"/>'),

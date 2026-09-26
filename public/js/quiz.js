@@ -2,7 +2,7 @@
 
 import { shuffle } from './rng.js';
 import {
-  parseGap, glossOverlap, letterHint, shortHint, editDistance, acceptedSpellings, typedCorrect,
+  norm, parseGap, glossOverlap, letterHint, shortHint, editDistance, acceptedSpellings, typedCorrect,
 } from './text.js';
 
 const BY_BOX = {
@@ -12,13 +12,13 @@ const BY_BOX = {
   1: ['word', 'listen'],
   2: ['gap', 'spell', 'dictation'],
   3: ['spell', 'gapType', 'dictation'],
-  4: ['gapType', 'dictation'],
-  5: ['gapType', 'spell', 'dictation'],
+  4: ['gapType', 'dictation', 'say'],
+  5: ['gapType', 'spell', 'dictation', 'say'],
   exam: ['spell', 'gapType', 'dictation'],
 };
 
 // box: 'probe' | 'confirm' | 'check' (a new word's items), 'exam', or 1..8 = the card's box.
-export function allowedTypes(box, word, { canListen = true } = {}) {
+export function allowedTypes(box, word, { canListen = true, canSay = false } = {}) {
   const hasGap = !!word.ex;
   if (word.gapOnly && hasGap) {
     return box === 'probe' || box === 1 ? ['gap'] : ['gapType'];
@@ -26,6 +26,7 @@ export function allowedTypes(box, word, { canListen = true } = {}) {
   const row = typeof box === 'number' && box >= 5 ? BY_BOX[5] : BY_BOX[box] || BY_BOX[1];
   const ok = row.filter((t) => {
     if (t === 'listen' || t === 'dictation') return canListen;
+    if (t === 'say') return canSay;
     return t.startsWith('gap') ? hasGap : true;
   });
   return ok.length ? ok : [box === 1 ? 'word' : 'spell'];
@@ -91,6 +92,11 @@ export function makeQuestion(word, type, pool, rnd, { hint = 'full' } = {}) {
   if (type === 'spell') {
     q.accept = acceptedSpellings(word);
     q.hint = hintOf(word.w);
+  } else if (type === 'say') {
+    // spoken; the hint only shows if the question falls back to typing (DESIGN §4)
+    q.accept = acceptedSpellings(word);
+    q.hint = null;
+    q.fallbackHint = hintOf(word.w);
   } else if (type === 'dictation') {
     q.accept = acceptedSpellings(word);
     q.hint = null;
@@ -118,6 +124,17 @@ export function synonymOf(input, target, pool) {
   return pool.find(
     (x) => x.id !== target.id && typedCorrect(input, acceptedSpellings(x)) && glossOverlap(x.th, target.th),
   ) ?? null;
+}
+
+// Speech recognition (DESIGN §4): right when any alternative equals an accepted spelling or
+// contains it as a whole word (a phrase: contains the phrase). No fuzzy matching.
+const spoken = (s) => norm(s).replace(/[^\p{L}\p{N}' -]/gu, ' ').replace(/\s+/g, ' ').trim();
+export function sayMatches(alternatives, word) {
+  const accepted = acceptedSpellings(word).map(spoken).filter(Boolean);
+  return alternatives.some((alt) => {
+    const n = ` ${spoken(alt)} `;
+    return accepted.some((a) => n.includes(` ${a} `));
+  });
 }
 
 // response: an option id (MCQ) or the typed string (spell, gapType, dictation).

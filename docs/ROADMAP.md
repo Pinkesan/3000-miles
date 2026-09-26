@@ -61,7 +61,7 @@
 - [x] **C4.** Content a1-02 … a1-05
 - [x] **C5.** Content a1-06 … a1-09
 - [x] **C6.** Content a2-04, a2-05, a2-06
-- [ ] **Step 13.** Say it: speaking question type (optional) → [steps/13-say-it.md](steps/13-say-it.md)
+- [x] **Step 13.** Say it: speaking question type (optional) → [steps/13-say-it.md](steps/13-say-it.md)
 - [ ] **C7.** Content a2-07, a2-08, b1-04
 - [ ] **C8.** Content b1-05, b1-06, b1-07
 - [ ] **C9.** Content b2-04, b2-05, b2-06
@@ -106,6 +106,7 @@ Token economy:
 
 ## Log
 
+- 2026-09-26: Step 13. New `say` type: pure `quiz.sayMatches` (any of 5 alternatives, whole word or phrase, no fuzzy matching) + `allowedTypes` `canSay` (boxes 4 and 5–8, never probe/confirm/check/exam), `POINTS.say` 20 (typed, no speed bonus); `speech.js` `canListen/listenOnce/MIC_ERRORS`; `questionView` mic button (Space too), a miss shows "ได้ยินว่า", the second miss or a mic error becomes `spell` with the hint (graded normally; the miss itself is not graded), `view.destroy()` aborts listening; settings `sayMode` + `sayNotice` (shown only if the browser can listen, first-time privacy notice); DESIGN §4 updated; version 0.4.0; ui-check scene `say` with a recognition stub; 143 tests pass, `JS errors: none`. Deviations: the fallback spell answer is graded as `say` (same points as spell); on a right spoken answer the view passes `accept[0]` to `onAnswer`. Not tried on a real phone yet: the user should try it once.
 - 2026-09-26: C6. `content/{a2-04,a2-05,a2-06}.json` (300 words, `npm run check` 0 errors 0 warnings each); `build:data` → 2100 words (A1 900, A2 600, B1 300, B2 300); 141 tests pass. No deviations.
 - 2026-09-26: C5. `content/{a1-06,a1-07,a1-08,a1-09}.json` (400 words, `npm run check` 0 errors 0 warnings each); `build:data` → 1800 words (A1 900, A2 300, B1 300, B2 300); 141 tests pass. A1 is now complete. No deviations.
 - 2026-09-26: C4. `content/{a1-02,a1-03,a1-04,a1-05}.json` (400 words, `npm run check` 0 errors 0 warnings each); `build:data` → 1400 words (A1 500, A2 300, B1 300, B2 300); 141 tests pass. No deviations.

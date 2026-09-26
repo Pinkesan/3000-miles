@@ -114,3 +114,54 @@ export function stopSpeaking() {
   token += 1;
   synth?.cancel();
 }
+
+// Speech recognition (Say it, DESIGN §4). Looked up lazily so a test can stub it.
+const recognitionCtor = () => globalThis.SpeechRecognition || globalThis.webkitSpeechRecognition || null;
+export const canListen = () => !!recognitionCtor();
+
+export const MIC_ERRORS = {
+  'not-allowed': 'เบราว์เซอร์ไม่ได้อนุญาตให้ใช้ไมค์ ให้พิมพ์คำตอบแทน',
+  'service-not-allowed': 'เบราว์เซอร์นี้ไม่เปิดระบบฟังเสียง ให้พิมพ์คำตอบแทน',
+  'audio-capture': 'ไม่พบไมโครโฟน ให้พิมพ์คำตอบแทน',
+  network: 'ระบบฟังเสียงต้องต่ออินเทอร์เน็ต ให้พิมพ์คำตอบแทน',
+  'language-not-supported': 'เบราว์เซอร์นี้ฟังภาษาอังกฤษไม่ได้ ให้พิมพ์คำตอบแทน',
+  'no-speech': 'ไม่ได้ยินเสียงพูด ให้พิมพ์คำตอบแทน',
+};
+
+// One utterance, no interim results, up to 5 alternatives. Calls onResult(alternatives) or
+// onError(code) exactly once. Returns { stop, abort } or null when nothing can listen.
+export function listenOnce({ lang = 'en-US', onResult, onError } = {}) {
+  const Recognition = recognitionCtor();
+  if (!Recognition) return null;
+  let settled = false;
+  const rec = new Recognition();
+  rec.lang = lang;
+  rec.continuous = false;
+  rec.interimResults = false;
+  rec.maxAlternatives = 5;
+  rec.onresult = (e) => {
+    if (settled) return;
+    settled = true;
+    onResult?.(Array.from(e.results[0] ?? [], (a) => a.transcript));
+  };
+  rec.onerror = (e) => {
+    if (settled || e.error === 'aborted') return;
+    settled = true;
+    onError?.(e.error);
+  };
+  rec.onend = () => {
+    if (settled) return;
+    settled = true;
+    onError?.('no-speech');
+  };
+  try {
+    rec.start();
+  } catch {
+    settled = true;
+    return null;
+  }
+  return {
+    stop() { try { rec.stop(); } catch { /* already stopped */ } },
+    abort() { settled = true; try { rec.abort(); } catch { /* ignore */ } },
+  };
+}

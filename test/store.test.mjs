@@ -33,6 +33,9 @@ test('checkpoints and exam: fresh defaults, kept when valid, junk dropped', () =
 test('unknown settings values fall back to defaults', () => {
   const s = normalizeState({ settings: { newPerDay: 7, theme: 'pink', rate: 9, autoplay: 'yes', sound: 0, voice: 3 } });
   assert.deepEqual(s.settings, DEFAULT_SETTINGS);
+  assert.equal(normalizeState({ settings: { sayMode: 'yes' } }).settings.sayMode, false);
+  assert.equal(normalizeState({ settings: { sayMode: true } }).settings.sayMode, true);
+  assert.equal(DEFAULT_SETTINGS.sayMode, false);
 });
 
 test('an old save loses its start level (levels come in order, DESIGN §1 rule 10)', () => {

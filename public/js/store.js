@@ -4,6 +4,7 @@ export const APP = '3000-miles';
 
 export const DEFAULT_SETTINGS = {
   newPerDay: 10, voice: '', rate: 0.9, autoplay: true, sound: true, theme: 'auto',
+  sayMode: false, sayNotice: false,
 };
 
 const CHOICES = {
@@ -43,6 +44,8 @@ function normalizeSettings(s) {
     rate: Number.isFinite(src.rate) && src.rate >= 0.5 && src.rate <= 1.5 ? src.rate : d.rate,
     autoplay: typeof src.autoplay === 'boolean' ? src.autoplay : d.autoplay,
     sound: typeof src.sound === 'boolean' ? src.sound : d.sound,
+    sayMode: typeof src.sayMode === 'boolean' ? src.sayMode : d.sayMode,
+    sayNotice: typeof src.sayNotice === 'boolean' ? src.sayNotice : d.sayNotice,
   };
 }
 

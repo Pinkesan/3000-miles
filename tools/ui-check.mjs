@@ -1,7 +1,7 @@
 // UI smoke test: drives headless Chrome through the app, saves screenshots to .shots/ and
 // reports JS errors. Starts its own server (port 0), so the game server on 5320 is left alone.
 //   npm run ui
-//   ONLY=home,card npm run ui   (scenes: home card words word settings backup drive types synonym score arcade map postcard arrive checkpoint streak resume done pwa mobile dark light)   (Git Bash)   PowerShell: $env:ONLY='home'; npm run ui
+//   ONLY=home,card npm run ui   (scenes: home card words word settings backup drive types synonym say score arcade map postcard arrive checkpoint streak resume done pwa mobile dark light)   (Git Bash)   PowerShell: $env:ONLY='home'; npm run ui
 // Option: CHROME=path/to/chrome.exe
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -134,6 +134,20 @@ await send('Page.addScriptToEvaluateOnNewDocument', {
     s.cancel = () => {};
     window.SpeechSynthesisUtterance = function (text) { this.text = text; };
     s.getVoices = () => [{ name: 'Test Voice', lang: 'en-US', voiceURI: 'test', localService: true, default: true }];
+  })();
+  // Recognition stub: window.__sayScript is a queue; each start() takes one entry, an array of
+  // alternatives (a result) or an error code string.
+  (() => {
+    window.SpeechRecognition = function () {
+      this.start = () => setTimeout(() => {
+        const next = (window.__sayScript || []).shift();
+        if (Array.isArray(next)) this.onresult && this.onresult({ results: [next.map((t) => ({ transcript: t }))] });
+        else this.onerror && this.onerror({ error: next || 'no-speech' });
+        this.onend && this.onend();
+      }, 30);
+      this.stop = () => {};
+      this.abort = () => {};
+    };
   })();`,
 });
 
@@ -552,6 +566,74 @@ try {
       await shot('m-drive-synonym');
       await type(bicycle.w);
       check(await evaluate(`!!document.querySelector('.fb-right')`), 'synonym: the right word is right');
+      await viewport(1366, 768);
+    }
+  }
+
+  if (want('say')) {
+    // Say it: right at once; a miss then right; a double miss falls back to spell; a mic error too
+    const bicycle = words.find((w) => w.w === 'bicycle');
+    check(!!bicycle, 'say: a1-01 has bicycle');
+    if (bicycle) {
+      const card = { b: 5, d: 20500, g: 20490, n: 3, r: 3, l: 0, m: 1, md: 20495 };
+      const mkLeg = () => ({
+        v: 2, day: 20500, done: 0, reasks: {}, newCount: 0, startMiles: 1, ids: [bicycle.id],
+        stats: { right: 0, wrong: 0, taught: 0, known: 0, reviewed: 0, miles: 0 },
+        queue: [{ key: 'review-bicycle', id: bicycle.id, kind: 'review', type: 'say', hint: 'short' }],
+      });
+      const open = async (script) => {
+        await loadWith({ cards: { [bicycle.id]: card }, leg: mkLeg(), settings: { sayMode: true, sayNotice: true } });
+        await setHash('#/drive');
+        await waitFor(`!!__app.item()`);
+        await evaluate(`window.__sayScript = ${JSON.stringify(script)}`);
+      };
+      const mic = () => evaluate(`document.querySelector('.mic-btn').click()`);
+      const typeIn = async (text) => {
+        await evaluate(`document.querySelector('.answer-input').focus()`);
+        await send('Input.insertText', { text });
+        await evaluate(`document.querySelector('.answer-form button').click()`);
+      };
+      await viewport(390, 844, true);
+
+      await open([['bicycle']]);
+      check(await evaluate(`!!document.querySelector('.mic-btn') && !document.querySelector('.answer-input')`), 'say: a mic button, no input');
+      await shot('m-drive-say');
+      await mic();
+      await waitFor(`!!document.querySelector('.fb-right')`);
+      check(await evaluate(`document.querySelector('.mic-btn').disabled`), 'say: mic locked after the answer');
+      const won = JSON.parse(await evaluate(`localStorage.getItem(${JSON.stringify(KEY)})`)).cards[bicycle.id];
+      check(won.b === 6, `say: a right spoken answer moves the card up (box ${won.b})`);
+
+      await open([['bike'], ['the bicycle']]);
+      await mic();
+      await waitFor(`!!document.querySelector('.fb-retry')`);
+      check(await evaluate(`document.querySelector('.fb-retry').textContent.includes('bike') && !document.querySelector('.answer-input')`), 'say: a miss shows what was heard, one more try');
+      const mid = JSON.parse(await evaluate(`localStorage.getItem(${JSON.stringify(KEY)})`)).cards[bicycle.id];
+      check(mid.b === 5 && mid.g === 20490, 'say: a miss is not graded');
+      await mic();
+      await waitFor(`!!document.querySelector('.fb-right')`);
+
+      await open([['bike'], ['bake']]);
+      await mic();
+      await waitFor(`!!document.querySelector('.fb-retry')`);
+      await mic();
+      await waitFor(`!!document.querySelector('.answer-input')`);
+      check(await evaluate(`document.querySelector('.q-hint').textContent === 'b…' && !document.querySelector('.mic-btn')`), 'say: two misses turn into spell with the hint');
+      await shot('m-drive-say-fallback');
+      await typeIn('bicycle');
+      await waitFor(`!!document.querySelector('.fb-right')`);
+
+      await open(['not-allowed']);
+      await mic();
+      await waitFor(`!!document.querySelector('.answer-input')`);
+      check(await evaluate(`document.querySelector('.fb-retry').textContent.includes('ไมค์')`), 'say: a mic error explains and falls back');
+      await typeIn('nothing');
+      await waitFor(`!!document.querySelector('.fb-wrong')`);
+      const lost = JSON.parse(await evaluate(`localStorage.getItem(${JSON.stringify(KEY)})`)).cards[bicycle.id];
+      check(lost.b < 5, 'say: a wrong typed fallback is graded');
+
+      await setHash('#/settings');
+      await waitFor(`!!document.querySelector('#say-mode')`);
       await viewport(1366, 768);
     }
   }

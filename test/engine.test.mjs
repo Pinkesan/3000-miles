@@ -945,3 +945,33 @@ test('progress: carFraction spreads stops evenly and follows miles inside a segm
   assert.equal(progress.carFraction(ROUTE, 200), (1 + 0.5) / 3);
   assert.equal(progress.carFraction(ROUTE, 50), 0.5 / 3);
 });
+
+test('quiz: say joins boxes 4 and 5-8 only when canSay (DESIGN §4)', () => {
+  const w = { w: 'bicycle', th: 'จักรยาน', p: 'n', ex: 'I ride a [bicycle].' };
+  const caps = { canListen: true, canSay: true };
+  assert.deepEqual(quiz.allowedTypes(4, w, caps), ['gapType', 'dictation', 'say']);
+  assert.deepEqual(quiz.allowedTypes(6, w, caps), ['gapType', 'spell', 'dictation', 'say']);
+  for (const box of [1, 2, 3, 'probe', 'confirm', 'check', 'exam']) assert.ok(!quiz.allowedTypes(box, w, caps).includes('say'), String(box));
+  assert.ok(!quiz.allowedTypes(4, w, { canListen: true }).includes('say'));
+  assert.deepEqual(quiz.allowedTypes(4, w, { canListen: false, canSay: true }), ['gapType', 'say']);
+  const q = quiz.makeQuestion(w, 'say', [w], () => 0.5, { hint: 'short' });
+  assert.deepEqual(q.accept, ['bicycle']);
+  assert.equal(q.hint, null);
+  assert.equal(q.fallbackHint, 'b…');
+  assert.ok(quiz.isCorrect(q, 'Bicycle'));
+  assert.ok(!quiz.isCorrect(q, 'bike'));
+});
+
+test('quiz: sayMatches takes any alternative, whole words only, no fuzzy matching', () => {
+  const bank = { w: 'bank' };
+  assert.ok(quiz.sayMatches(['bang', 'Bank'], bank));
+  assert.ok(quiz.sayMatches(['the bank.'], bank));
+  assert.ok(!quiz.sayMatches(['banking', 'blank', 'bang'], bank));
+  assert.ok(!quiz.sayMatches([], bank));
+  assert.ok(!quiz.sayMatches(['bear'], { w: 'bare' }));
+  assert.ok(quiz.sayMatches(['an'], { w: 'a, an' }));
+  assert.ok(quiz.sayMatches(['i want ice cream'], { w: 'ice cream' }));
+  assert.ok(!quiz.sayMatches(['ice'], { w: 'ice cream' }));
+  assert.ok(quiz.sayMatches(['tee shirt', 't-shirt'], { w: 'T-shirt' }));
+  assert.ok(quiz.sayMatches(['okay'], { w: 'OK', alt: ['okay'] }));
+});
