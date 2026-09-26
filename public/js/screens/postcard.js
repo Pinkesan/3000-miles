@@ -2,6 +2,7 @@
 import { h, setChildren, th, en } from '../ui.js';
 import { icons } from '../icons.js';
 import { stopWords } from '../progress.js';
+import { wordItem } from '../components/wordrow.js';
 
 const MAX_WORDS = 12;
 
@@ -39,7 +40,7 @@ export function render(root, app, params) {
       h('h2', {}, th('คำที่ได้ในช่วงนี้'), th(` (${ids.length} คำ)`, { class: 'muted' })),
       shown.length
         ? h('ul', { class: 'pc-words', id: 'pc-words' },
-            shown.map((w) => h('li', {}, en(w.w, { class: 'lw-w' }), th(w.th, { class: 'lw-th muted' }))))
+            shown.map((w) => wordItem(w)))
         : h('p', { class: 'muted' }, th('ยังไม่มีคำในช่วงนี้')),
     );
   }

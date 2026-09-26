@@ -1,7 +1,7 @@
 // UI smoke test: drives headless Chrome through the app, saves screenshots to .shots/ and
 // reports JS errors. Starts its own server (port 0), so the game server on 5320 is left alone.
 //   npm run ui
-//   ONLY=home,card npm run ui   (scenes: home card drive types synonym score arcade map postcard arrive checkpoint streak resume done mobile dark light)   (Git Bash)   PowerShell: $env:ONLY='home'; npm run ui
+//   ONLY=home,card npm run ui   (scenes: home card words word settings backup drive types synonym score arcade map postcard arrive checkpoint streak resume done mobile dark light)   (Git Bash)   PowerShell: $env:ONLY='home'; npm run ui
 // Option: CHROME=path/to/chrome.exe
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -345,17 +345,128 @@ try {
     check(await evaluate(`!!document.querySelector('.odometer') && !!document.querySelector('#main-btn')`), 'home: odometer and main button');
     check(await evaluate(`document.querySelector('#ready')?.textContent.includes('/3000')`), 'home: ready count');
     await shot('home');
-    // changing new words per day is saved
-    await evaluate(`(() => { const s = document.querySelector('#new-per-day'); s.value = '15'; s.dispatchEvent(new Event('change')); })()`);
-    check(await evaluate(`JSON.parse(localStorage.getItem('miles3000.v1')).settings.newPerDay === 15`), 'home: newPerDay saved');
-    check(await evaluate(`document.querySelector('#plan-line').textContent.includes('คำใหม่ 15')`), 'home: plan line follows newPerDay');
-    await evaluate(`(() => { const s = document.querySelector('#new-per-day'); s.value = '10'; s.dispatchEvent(new Event('change')); })()`);
-    // start level is saved, and changes the intro order
-    await evaluate(`(() => { const s = document.querySelector('#start-level'); s.value = 'B1'; s.dispatchEvent(new Event('change')); })()`);
-    check(await evaluate(`JSON.parse(localStorage.getItem('miles3000.v1')).settings.startLevel === 'B1'`), 'home: startLevel saved');
-    check(await evaluate(`document.querySelector('#start-level').value === 'B1'`), 'home: start level select keeps B1');
-    await evaluate(`(() => { const s = document.querySelector('#start-level'); s.value = 'A1'; s.dispatchEvent(new Event('change')); })()`);
-    check(await evaluate(`JSON.parse(localStorage.getItem('miles3000.v1')).settings.startLevel === 'A1'`), 'home: startLevel back to A1');
+    check(await evaluate(`!document.querySelector('#new-per-day') && !!document.querySelector('#words-link') && !!document.querySelector('#settings-link')`), 'home: links to words and settings, no temporary selects');
+  }
+
+  if (want('words')) {
+    await freshLoad();
+    await setHash('#/words');
+    const rows = () => evaluate(`document.querySelectorAll('#word-rows li').length`);
+    check(await rows() === Math.min(100, words.length), 'words: a page of 100 rows');
+    check(await evaluate(`document.querySelector('#count-line').textContent.includes('จาก ${words.length} คำ')`), 'words: count line');
+    await shot('words');
+    await evaluate(`(() => { const i = document.querySelector('#search'); i.value = 'ban'; i.dispatchEvent(new Event('input')); })()`);
+    await sleep(400);
+    const ban = words.filter((w) => w.w.toLowerCase().startsWith('ban')).length;
+    check(await rows() === ban && ban > 0, 'words: search "ban" matches the start of words');
+    check(await evaluate(`location.hash.includes('q=ban')`), 'words: query kept in the hash');
+    await evaluate(`document.querySelector('#level-chips [data-value="A1"]').click()`);
+    await evaluate(`document.querySelector('#status-chips [data-value="new"]').click()`);
+    check(await evaluate(`/lv=A1/.test(location.hash) && /st=new/.test(location.hash)`), 'words: filters kept in the hash');
+    const banA1 = words.filter((w) => w.w.toLowerCase().startsWith('ban') && w.lv === 'A1').length;
+    check(await rows() === banA1, 'words: level and status filters combine');
+    await evaluate(`document.querySelector('#search').value = ''; document.querySelector('#search').dispatchEvent(new Event('input'))`);
+    await sleep(400);
+    await evaluate(`document.querySelector('.word-row').click()`);
+    await waitFor(`location.hash.startsWith('#/word/')`);
+    await evaluate(`history.back()`);
+    await waitFor(`location.hash.startsWith('#/words')`);
+    await sleep(300);
+    check(await evaluate(`/lv=A1/.test(location.hash) && document.querySelector('#level-chips .chip-on')?.dataset.value === 'A1'`), 'words: back returns to the same filtered list');
+    await setHash('#/words?q=' + encodeURIComponent('ธนาคาร'));
+    check(await rows() >= 1 && await evaluate(`document.querySelector('.wr-th').textContent.includes('ธนาคาร')`), 'words: Thai search finds meanings');
+    await setHash('#/words?q=zzzzq');
+    check(await rows() === 0, 'words: no match shows an empty list');
+  }
+
+  if (want('word')) {
+    await freshLoad();
+    await setHash('#/word/' + rich.id);
+    check(await evaluate(`!!document.querySelector('.wordcard') && !!document.querySelector('#pos-list li')`), 'word: card and POS list');
+    check(await evaluate(`document.querySelector('#status-name').textContent === 'ยังไม่เริ่ม'`), 'word: a new word says ยังไม่เริ่ม');
+    await evaluate(`document.querySelector('#flag-note').value = 'ทดสอบ'`);
+    await evaluate(`document.querySelector('#flag-btn').click()`);
+    check(await evaluate(`JSON.parse(localStorage.getItem('miles3000.v1')).flags[${JSON.stringify(rich.id)}]?.note === 'ทดสอบ'`), 'word: flag saved with the note');
+    check(await evaluate(`document.querySelector('#flag-btn').textContent === 'ยกเลิกการแจ้ง'`), 'word: flag button toggles');
+    await evaluate(`document.querySelector('#flag-btn').click()`);
+    check(await evaluate(`!JSON.parse(localStorage.getItem('miles3000.v1')).flags[${JSON.stringify(rich.id)}]`), 'word: flag removed');
+    await shot('word');
+    await loadWith({ cards: { [rich.id]: { b: 4, d: 20505, g: 20499, n: 6, r: 5, l: 1, m: 7, md: 20495 } } });
+    await setHash('#/word/' + rich.id);
+    check(await evaluate(`document.querySelector('#status-name').textContent === 'ได้ไมล์แล้ว' && document.querySelector('#review-line').textContent.includes('อีก 5 วัน') && document.querySelector('#mile-line').textContent.includes('7')`), 'word: status, next review and mile number');
+    await shot('word-learned');
+    await setHash('#/word/nope-not-a-word');
+    check(await evaluate(`location.hash.startsWith('#/words')`), 'word: unknown id goes to the list');
+  }
+
+  if (want('settings')) {
+    await freshLoad();
+    await setHash('#/settings');
+    await shot('settings');
+    const saved = () => evaluate(`JSON.parse(localStorage.getItem('miles3000.v1')).settings`);
+    const change = (id, v) => evaluate(`(() => { const s = document.querySelector('#${id}'); s.value = '${v}'; s.dispatchEvent(new Event('change')); })()`);
+    await change('new-per-day', '15');
+    check((await saved()).newPerDay === 15, 'settings: newPerDay saved');
+    check(await evaluate(`JSON.parse(localStorage.getItem('miles3000.v1')).days[20500].newTarget === 15`), "settings: today's plan follows newPerDay");
+    check(await evaluate(`document.querySelector('#pace-note').textContent.includes('20 นาที')`), 'settings: pace time line');
+    await change('new-per-day', '10');
+    await change('start-level', 'B1');
+    check((await saved()).startLevel === 'B1', 'settings: startLevel saved');
+    check(await evaluate(`__app.app.byId.get(__app.app.order[0]).lv === 'B1'`), 'settings: order changes at once');
+    await change('start-level', 'A1');
+    await change('theme', 'dark');
+    check(await evaluate(`document.documentElement.dataset.theme === 'dark' && getComputedStyle(document.body).backgroundColor === 'rgb(21, 23, 27)'`), 'settings: dark theme applies at once');
+    await change('theme', 'light');
+    check(await evaluate(`getComputedStyle(document.body).backgroundColor === 'rgb(238, 241, 238)'`), 'settings: light theme applies at once');
+    await change('theme', 'auto');
+    check((await saved()).theme === 'auto', 'settings: theme back to auto');
+    await change('rate', '0.8');
+    await change('autoplay', 'false');
+    await change('sound', 'false');
+    const s = await saved();
+    check(s.rate === 0.8 && s.autoplay === false && s.sound === false, 'settings: rate, autoplay and sound saved');
+    check(await evaluate(`document.querySelectorAll('#voice option').length >= 2`), 'settings: voice list has the test voice');
+    await change('voice', 'Test Voice');
+    check((await saved()).voice === 'Test Voice', 'settings: voice saved');
+    await evaluate(`document.querySelector('#voice-test').click()`);
+    check(await evaluate(`document.querySelector('#about').textContent.includes('Oxford') && document.querySelector('#version').textContent.includes('v0.')`), 'settings: about and version');
+    // the reset asks first
+    await evaluate(`document.querySelector('#reset-btn').click()`);
+    await waitFor(`!!document.querySelector('dialog.confirm')`);
+    await evaluate(`document.querySelector('dialog.confirm .btn-quiet').click()`);
+    await sleep(200);
+    check(await evaluate(`JSON.parse(localStorage.getItem('miles3000.v1')).settings.rate === 0.8 && location.hash === '#/settings'`), 'settings: cancelling the reset keeps everything');
+    await evaluate(`document.querySelector('#reset-btn').click()`);
+    await waitFor(`!!document.querySelector('dialog.confirm')`);
+    await evaluate(`document.querySelector('dialog.confirm .btn-danger').click()`);
+    await waitFor(`location.hash === '#/'`);
+    check(await evaluate(`JSON.parse(localStorage.getItem('miles3000.v1')).settings.rate === 0.9`), 'settings: reset restores the defaults');
+  }
+
+  if (want('backup')) {
+    await loadWith({ cards: milesCards(20), settings: { newPerDay: 20 } });
+    const before = await savedState();
+    const file = await evaluate(`JSON.stringify(__app.app.store.exportData())`);
+    check(JSON.parse(file).app === '3000-miles' && JSON.parse(file).data.settings.newPerDay === 20, 'backup: export has the app name and the data');
+    await evaluate(`__app.app.store.reset()`);
+    check(await evaluate(`Object.keys(__app.app.store.state.cards).length === 0`), 'backup: reset empties the cards');
+    await evaluate(`__app.app.store.importData(${JSON.stringify(file)})`);
+    const after = await savedState();
+    check(JSON.stringify(after.cards) === JSON.stringify(before.cards) && after.settings.newPerDay === 20, 'backup: import restores the cards and settings');
+    check(await evaluate(`(() => { try { __app.app.store.importData('{oops'); return false; } catch { return true; } })()`), 'backup: a broken file throws');
+    // the real screen: a wrong file gives an error toast and keeps the data
+    await setHash('#/settings');
+    const pick = (content) => evaluate(`(() => { const dt = new DataTransfer(); dt.items.add(new File([${JSON.stringify(content)}], 'b.json', { type: 'application/json' })); const i = document.querySelector('#restore-file'); i.files = dt.files; i.dispatchEvent(new Event('change')); })()`);
+    await pick('{"app":"other"}');
+    await waitFor(`!!document.querySelector('.toast-error')`);
+    check(await evaluate(`Object.keys(__app.app.store.state.cards).length === 20`), 'backup: a wrong file changes nothing');
+    // a right file replaces the state after the confirm box
+    await evaluate(`__app.app.store.reset()`);
+    await pick(file);
+    await waitFor(`!!document.querySelector('dialog.confirm')`);
+    await evaluate(`document.querySelector('dialog.confirm .btn-danger').click()`);
+    await waitFor(`Object.keys(__app.app.store.state.cards).length === 20`);
+    await freshLoad();
   }
 
   if (want('card')) {
@@ -718,7 +829,7 @@ try {
 
   if (want('mobile')) {
     await viewport(390, 844, true);
-    for (const [name, hash] of [['home', '#/'], ['card', `#/card/${rich.id}`]]) {
+    for (const [name, hash] of [['home', '#/'], ['card', `#/card/${rich.id}`], ['words', '#/words'], ['word', `#/word/${rich.id}`], ['settings', '#/settings']]) {
       await setHash(hash);
       await shot(`mobile-${name}`);
       const wide = await evaluate(`document.documentElement.scrollWidth > innerWidth`);
@@ -762,7 +873,7 @@ try {
   if (want('dark')) {
     await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'dark' }] });
     await viewport(390, 844, true);
-    for (const [name, hash] of [['home', '#/'], ['card', `#/card/${rich.id}`]]) {
+    for (const [name, hash] of [['home', '#/'], ['card', `#/card/${rich.id}`], ['words', '#/words'], ['word', `#/word/${rich.id}`], ['settings', '#/settings']]) {
       await setHash(hash);
       check(await evaluate(`getComputedStyle(document.body).backgroundColor === 'rgb(21, 23, 27)'`), `dark ${name}: dark background`);
       await shot(`dark-${name}`);
@@ -797,7 +908,7 @@ try {
   if (want('light')) {
     await evaluate(`document.documentElement.dataset.theme = 'light'`);
     await viewport(390, 844, true);
-    for (const [name, hash] of [['home', '#/'], ['card', `#/card/${rich.id}`]]) {
+    for (const [name, hash] of [['home', '#/'], ['card', `#/card/${rich.id}`], ['words', '#/words'], ['word', `#/word/${rich.id}`], ['settings', '#/settings']]) {
       await setHash(hash);
       check(await evaluate(`getComputedStyle(document.body).backgroundColor === 'rgb(238, 241, 238)'`), `light ${name}: light background`);
       await shot(`light-${name}`);

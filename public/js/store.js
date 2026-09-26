@@ -1,5 +1,6 @@
 // Saved state in localStorage (DESIGN §10). Memory fallback when storage is unavailable.
 export const KEY = 'miles3000.v1';
+export const APP = '3000-miles';
 
 export const DEFAULT_SETTINGS = {
   newPerDay: 10, startLevel: 'A1', voice: '', rate: 0.9, autoplay: true, sound: true, theme: 'auto',
@@ -89,6 +90,22 @@ export function createStore(storage) {
     },
     update(fn) {
       fn(store.state);
+      store.save();
+    },
+    // DESIGN §10: a backup is the whole state in a small envelope.
+    exportData(now = new Date()) {
+      return { app: APP, v: 1, exportedAt: now.toISOString(), data: store.state };
+    },
+    // Replaces the whole state (no merge). Throws on a file that is not one of our backups.
+    importData(text) {
+      let file;
+      try { file = JSON.parse(text); } catch { throw new Error('not json'); }
+      if (!isObj(file) || file.app !== APP || !isObj(file.data)) throw new Error('not a 3000 Miles backup');
+      store.state = normalizeState(file.data);
+      store.save();
+    },
+    reset() {
+      store.state = freshState();
       store.save();
     },
   };

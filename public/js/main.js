@@ -15,6 +15,9 @@ import * as arcade from './screens/arcade.js';
 import * as map from './screens/map.js';
 import * as postcard from './screens/postcard.js';
 import * as checkpoint from './screens/checkpoint.js';
+import * as wordsScreen from './screens/words.js';
+import * as wordScreen from './screens/word.js';
+import * as settings from './screens/settings.js';
 
 const query = new URLSearchParams(location.search);
 export const testMode = query.has('test');
@@ -30,6 +33,9 @@ const ROUTES = {
   map: { screen: map, title: 'แผนที่' },
   postcard: { screen: postcard, title: 'โปสการ์ด' },
   checkpoint: { screen: checkpoint, title: 'ด่านตรวจ' },
+  words: { screen: wordsScreen, title: 'คลังคำศัพท์' },
+  word: { screen: wordScreen, title: 'คำศัพท์' },
+  settings: { screen: settings, title: 'ตั้งค่า' },
 };
 
 function applyTheme(theme) {
@@ -104,7 +110,8 @@ async function boot() {
 
   let current = null;
   function route() {
-    const [name = '', ...params] = location.hash.replace(/^#\/?/, '').split('/');
+    const [path, qs = ''] = location.hash.replace(/^#\/?/, '').split('?');
+    const [name = '', ...params] = path.split('/');
     const key = name === '' ? 'home' : name;
     const entry = ROUTES[key];
     if (!entry) {
@@ -119,7 +126,7 @@ async function boot() {
     root.dataset.route = key;
     const view = h('div', { class: 'screen' });
     setChildren(root, view);
-    current = entry.screen.render(view, app, { route: key, args: params.map(decodeURIComponent) }) || null;
+    current = entry.screen.render(view, app, { route: key, args: params.map(decodeURIComponent), query: new URLSearchParams(qs) }) || null;
   }
   addEventListener('hashchange', route);
   route();

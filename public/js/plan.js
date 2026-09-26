@@ -44,6 +44,13 @@ export function makeDayPlan(cards, today, settings = {}) {
   };
 }
 
+// The player changed new words a day (Settings): today's plan follows unless it is capped by a backlog.
+// Words already taught or known today stay in the target.
+export function withNewPerDay(plan, value) {
+  const newTarget = plan.dueTotal > DUE_CAP ? 0 : Math.max(plan.taught + plan.known, value);
+  return { ...plan, newTarget, goal: plan.due.length + newTarget };
+}
+
 export function nextNew(order, cards, plan, n, exclude = new Set()) {
   const shown = new Set(plan.shown);
   const out = [];

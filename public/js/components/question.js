@@ -21,7 +21,8 @@ export const advancesAlone = (q, correct) => correct && AUTO_TYPES.includes(q.ty
 export function miniCard(app, word) {
   return h('div', { class: 'minicard' },
     h('div', { class: 'mc-head' },
-      en(word.w, { class: 'mc-w' }), en(posLabel(word), { class: 'mc-pos' }), th(word.th, { class: 'mc-th' }),
+      h('a', { class: 'mc-w', lang: 'en', href: `#/word/${encodeURIComponent(word.id)}`, 'aria-label': 'ดูรายละเอียดคำนี้' }, word.w),
+      en(posLabel(word), { class: 'mc-pos' }), th(word.th, { class: 'mc-th' }),
       speaker('ฟังเสียงคำศัพท์', () => app.say(firstForm(word)))),
     word.ex ? h('p', { class: 'mc-ex' }, exampleLine(word.ex)) : null,
   );

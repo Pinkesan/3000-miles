@@ -1,4 +1,4 @@
-// #/ Home (DESIGN §7). Words and settings links come later.
+// #/ Home (DESIGN §7).
 import { h, setChildren, th, en, thaiDay } from '../ui.js';
 import { icons } from '../icons.js';
 import { countMiles, countFlat } from '../srs.js';
@@ -7,11 +7,8 @@ import { openCheckpoint, canTry } from '../checkpoint.js';
 import { tankFill, tankText } from '../summary.js';
 import { odometer } from '../components/odometer.js';
 import { gauge } from '../components/gauge.js';
-import { introOrder, newLeft } from '../plan.js';
+import { newLeft } from '../plan.js';
 import { arcadeOpen, arcadeUnlocked } from '../arcade.js';
-
-const PER_DAY = [5, 10, 15, 20, 30];
-const LEVELS = ['A1', 'A2', 'B1', 'B2'];
 
 // Rests are small P (parking) signs, at most 2.
 const restSigns = (n) => n > 0
@@ -43,33 +40,6 @@ export function render(root, app) {
   const rushUnlocked = arcadeUnlocked(store.state.cards);
   const rushBest = store.state.arcade.best;
   const mainLabel = hasLeg ? 'ขับต่อ' : planDone ? 'ขับเพิ่ม' : plan.legs > 0 ? 'ขับต่อ' : 'ออกเดินทาง';
-
-  const select = h('select', { id: 'new-per-day', class: 'select' },
-    PER_DAY.map((n) => h('option', { value: n, selected: n === app.settings.newPerDay }, `${n} คำ`)),
-  );
-  select.addEventListener('change', () => {
-    store.update((s) => {
-      s.settings.newPerDay = Number(select.value);
-      // Today's plan is a snapshot: only a day without any progress takes the new number.
-      const p = s.days[today];
-      if (p && p.legs === 0 && p.done === 0) {
-        p.newTarget = p.dueTotal > p.due.length ? 0 : s.settings.newPerDay;
-        p.goal = p.due.length + p.newTarget;
-      }
-    });
-    render(root, app);
-  });
-
-  // temporary: Step 10 moves both selects to settings
-  const levelSelect = h('select', { id: 'start-level', class: 'select' },
-    LEVELS.map((lv) => h('option', { value: lv, selected: lv === app.settings.startLevel },
-      `${lv} · ${app.words.filter((w) => w.lv === lv).length} คำ`)),
-  );
-  levelSelect.addEventListener('change', () => {
-    store.update((s) => { s.settings.startLevel = levelSelect.value; });
-    app.order = introOrder(app.words, levelSelect.value);
-    render(root, app);
-  });
 
   setChildren(
     root,
@@ -125,10 +95,11 @@ export function render(root, app) {
         : h('p', { class: 'muted', id: 'rush-locked' }, en('Highway Rush'), th(' · เปิดเมื่อขับครบแผนวันนี้'))
       : null,
     h('a', { class: 'btn btn-secondary', href: '#/map', id: 'map-link' }, h('span', { html: icons.map }), th('แผนที่ทริป')),
+    h('div', { class: 'home-links' },
+      h('a', { class: 'btn btn-secondary', href: '#/words', id: 'words-link' }, th('คลังคำศัพท์')),
+      h('a', { class: 'btn btn-secondary', href: '#/settings', id: 'settings-link' }, th('ตั้งค่า'))),
     ready < app.total
       ? h('p', { class: 'muted ready', id: 'ready' }, th('คำที่พร้อมเล่น '), en(`${ready}/${app.total}`))
       : null,
-    h('label', { class: 'field', for: 'new-per-day' }, th('คำใหม่ต่อวัน'), select),
-    h('label', { class: 'field', for: 'start-level' }, th('เริ่มจากระดับ'), levelSelect),
   );
 }

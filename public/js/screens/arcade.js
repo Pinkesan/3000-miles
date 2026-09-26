@@ -9,6 +9,7 @@ import {
 } from '../arcade.js';
 import * as sfx from '../sfx.js';
 import { questionView } from '../components/question.js';
+import { wordItem } from '../components/wordrow.js';
 
 let runNo = 0; // so every run of a session draws a different seed
 
@@ -155,7 +156,7 @@ export function render(root, app) {
       missed.length
         ? h('section', { class: 'leg-words', id: 'rush-missed' },
             h('h2', {}, th('คำที่ตอบผิด')),
-            h('ul', {}, missed.map((w) => h('li', {}, en(w.w, { class: 'lw-w' }), th(w.th, { class: 'lw-th muted' })))))
+            h('ul', {}, missed.map((w) => wordItem(w))))
         : null,
     );
     window.scrollTo(0, 0);

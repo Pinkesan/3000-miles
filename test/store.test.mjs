@@ -66,3 +66,52 @@ test('records: fresh, missing and junk values', () => {
   assert.deepEqual(normalizeState({ records: { combo: 12, day: 340, dayOn: 20700 } }).records, { combo: 12, day: 340, dayOn: 20700 });
   assert.deepEqual(normalizeState({ records: { combo: 'x', day: null, dayOn: 'y' } }).records, { combo: 0, day: 0, dayOn: null });
 });
+
+const memStore = () => {
+  const mem = new Map();
+  return createStore({ getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v) });
+};
+
+test('backup: export then import gives the same state', () => {
+  const a = memStore();
+  a.update((s) => {
+    s.settings.newPerDay = 20;
+    s.cards.bank = { b: 4, d: 20510, g: 20500, n: 5, r: 4, l: 1, m: 7, md: 20495 };
+    s.flags.bank = { day: 20500, note: 'x' };
+    s.stops.philadelphia = 20501;
+  });
+  const file = a.exportData(new Date('2026-09-26T10:00:00Z'));
+  assert.equal(file.app, '3000-miles');
+  assert.equal(file.v, 1);
+  assert.equal(file.exportedAt, '2026-09-26T10:00:00.000Z');
+  const b = memStore();
+  b.importData(JSON.stringify(file));
+  assert.deepEqual(b.state, a.state);
+});
+
+test('backup: a wrong app or broken JSON throws and keeps the state', () => {
+  const s = memStore();
+  s.update((x) => { x.settings.newPerDay = 15; });
+  assert.throws(() => s.importData('{nope'));
+  assert.throws(() => s.importData(JSON.stringify({ app: 'other', v: 1, data: {} })));
+  assert.throws(() => s.importData(JSON.stringify({ app: '3000-miles', v: 1 })));
+  assert.throws(() => s.importData('[]'));
+  assert.equal(s.state.settings.newPerDay, 15);
+});
+
+test('backup: a partial file is normalized', () => {
+  const s = memStore();
+  s.importData(JSON.stringify({ app: '3000-miles', v: 1, data: { settings: { theme: 'dark' }, cards: { a: { b: 2 } } } }));
+  assert.equal(s.state.settings.theme, 'dark');
+  assert.equal(s.state.settings.rate, DEFAULT_SETTINGS.rate);
+  assert.deepEqual(s.state.arcade, { best: 0, runs: [] });
+  assert.deepEqual(s.state.cards, { a: { b: 2 } });
+  s.reset();
+  assert.deepEqual(s.state, freshState());
+});
+
+test('version.js matches package.json', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { VERSION } = await import('../public/js/version.js');
+  assert.equal(VERSION, JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version);
+});

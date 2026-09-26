@@ -10,6 +10,7 @@ import {
 import * as sfx from '../sfx.js';
 import { questionView } from '../components/question.js';
 import { starsRow } from '../components/stars.js';
+import { wordItem } from '../components/wordrow.js';
 
 export function render(root, app, params) {
   const { store, byId, route } = app;
@@ -147,7 +148,7 @@ export function render(root, app, params) {
       missed.length
         ? h('section', { class: 'leg-words', id: 'exam-missed' },
             h('h2', {}, th('คำที่ตอบผิด')),
-            h('ul', {}, missed.map((w) => h('li', {}, en(w.w, { class: 'lw-w' }), th(w.th, { class: 'lw-th muted' })))))
+            h('ul', {}, missed.map((w) => wordItem(w))))
         : null,
     );
     window.scrollTo(0, 0);

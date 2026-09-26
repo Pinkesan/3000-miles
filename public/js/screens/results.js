@@ -9,6 +9,7 @@ import { arcadeOpen } from '../arcade.js';
 import { gradedToday } from '../srs.js';
 import { legSummary, tankText, tankFill, levelTip } from '../summary.js';
 import * as sfx from '../sfx.js';
+import { wordItem } from '../components/wordrow.js';
 
 const stat = (value, label) =>
   h('div', { class: 'stat' }, en(String(value), { class: 'stat-n' }), th(label, { class: 'stat-l' }));
@@ -86,7 +87,7 @@ export function render(root, app) {
     tip
       ? h('p', { class: 'today-line level-tip', id: 'level-tip' },
           th(`คำใหม่วันนี้รู้อยู่แล้ว ${tip.known} จาก ${tip.total} คำ ลองเริ่มจากระดับที่สูงขึ้น `),
-          h('a', { href: '#/' }, th('เปลี่ยนได้ที่หน้าแรก')))
+          h('a', { href: '#/settings' }, th('เปลี่ยนได้ที่ตั้งค่า')))
       : null,
     h('div', { class: 'results-actions' },
       canContinue ? h('a', { class: 'btn btn-primary btn-main', href: '#/drive', id: 'again-btn' }, th('ขับต่อ')) : null,
@@ -97,7 +98,7 @@ export function render(root, app) {
     words.length
       ? h('section', { class: 'leg-words' },
           h('h2', {}, th('คำในช่วงนี้')),
-          h('ul', {}, words.map((w) => h('li', {}, en(w.w, { class: 'lw-w' }), th(w.th, { class: 'lw-th muted' })))))
+          h('ul', {}, words.map((w) => wordItem(w))))
       : null,
   );
   return { destroy() { clearTimeout(timer); } };
