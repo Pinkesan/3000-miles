@@ -64,7 +64,7 @@
 - [x] **Step 13.** Say it: speaking question type (optional) → [steps/13-say-it.md](steps/13-say-it.md)
 - [x] **C7.** Content a2-07, a2-08, b1-04
 - [x] **C8.** Content b1-05, b1-06, b1-07
-- [ ] **C9.** Content b2-04, b2-05, b2-06
+- [x] **C9.** Content b2-04, b2-05, b2-06
 - ~~**Step 14.** Fast Lane: skip a level you already know~~ Dropped in Plan change 3: levels come in order (DESIGN §1 rule 10).
 - [ ] **Step 15.** Fix reported words + portfolio polish → [steps/15-polish.md](steps/15-polish.md)
 
@@ -106,6 +106,7 @@ Token economy:
 
 ## Log
 
+- 2026-09-26: C9. `content/{b2-04,b2-05,b2-06}.json` (300 words, `npm run check` 0 errors 0 warnings each); `build:data` → 3000 words (A1 900, A2 800, B1 700, B2 600); 143 tests pass. All 3000 words now have content. No deviations.
 - 2026-09-26: C8. `content/{b1-05,b1-06,b1-07}.json` (300 words, `npm run check` 0 errors 0 warnings each); `build:data` → 2700 words (A1 900, A2 800, B1 700, B2 300); 143 tests pass. B1 is now complete. No deviations.
 - 2026-09-26: C7. `content/{a2-07,a2-08,b1-04}.json` (300 words, `npm run check` 0 errors 0 warnings each); `build:data` → 2400 words (A1 900, A2 800, B1 400, B2 300); 143 tests pass. A2 is now complete. No deviations.
 - 2026-09-26: Step 13. New `say` type: pure `quiz.sayMatches` (any of 5 alternatives, whole word or phrase, no fuzzy matching) + `allowedTypes` `canSay` (boxes 4 and 5–8, never probe/confirm/check/exam), `POINTS.say` 20 (typed, no speed bonus); `speech.js` `canListen/listenOnce/MIC_ERRORS`; `questionView` mic button (Space too), a miss shows "ได้ยินว่า", the second miss or a mic error becomes `spell` with the hint (graded normally; the miss itself is not graded), `view.destroy()` aborts listening; settings `sayMode` + `sayNotice` (shown only if the browser can listen, first-time privacy notice); DESIGN §4 updated; version 0.4.0; ui-check scene `say` with a recognition stub; 143 tests pass, `JS errors: none`. Deviations: the fallback spell answer is graded as `say` (same points as spell); on a right spoken answer the view passes `accept[0]` to `onAnswer`. Not tried on a real phone yet: the user should try it once.
