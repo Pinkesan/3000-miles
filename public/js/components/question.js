@@ -3,7 +3,7 @@
 // onAnswer(response) and the screen calls paint(correct, response) with the result.
 import { h, setChildren, th, en } from '../ui.js';
 import { icons } from '../icons.js';
-import { POS_LABEL, blankGap, plain, posList } from '../text.js';
+import { POS_LABEL, baseFormHint, blankGap, plain, posList } from '../text.js';
 import { synonymOf, sayMatches } from '../quiz.js';
 import { listenOnce, MIC_ERRORS } from '../speech.js';
 import { exampleLine } from './wordcard.js';
@@ -46,6 +46,8 @@ export function questionView(app, q, { tag, kind, canSkip = false, speedBar = fa
     prompt.push(h('p', { class: 'q-sentence', lang: 'en' }, blankGap(word.ex)));
     if (word.exTh) prompt.push(th(word.exTh, { class: 'q-sentence-th' }));
   } else prompt.push(th(word.th, { class: 'q-th' }), pos);
+  const base = q.type === 'gapType' ? baseFormHint(word, q.gap.target) : null;
+  if (base) prompt.push(h('p', { class: 'q-base' }, th('เติมให้ถูกรูป จากคำว่า '), en(base, { class: 'q-base-w' })));
   if (q.hint) {
     const label = q.hint.includes('…') ? `คำใบ้ ${q.hint}` : `${q.hint.replace(/ /g, '').length} ตัวอักษร`;
     prompt.push(h('p', { class: 'q-hint', lang: 'en', 'aria-label': label }, q.hint));

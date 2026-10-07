@@ -99,6 +99,12 @@ export function acceptedSpellings(word) {
   return [...new Set(list.map(norm))];
 }
 
+// For a typed gap whose bracketed form differs from the taught word (eye -> [eyes]): the
+// word to show beside the blank so the player knows to inflect it. null when they match.
+export function baseFormHint(word, target) {
+  return typedCorrect(target, acceptedSpellings(word)) ? null : String(word.w).split(', ')[0];
+}
+
 export function typedCorrect(input, accepted) {
   const n = norm(input);
   return n !== '' && accepted.some((a) => norm(a) === n);

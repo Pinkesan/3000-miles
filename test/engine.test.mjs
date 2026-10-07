@@ -182,6 +182,13 @@ test('text: parseGap, blankGap, plain', () => {
   assert.throws(() => text.parseGap('[Two] [gaps]'));
 });
 
+test('text: baseFormHint names the taught word only when the blank is inflected', () => {
+  assert.equal(text.baseFormHint({ w: 'eye' }, 'eyes'), 'eye');
+  assert.equal(text.baseFormHint({ w: 'go' }, 'went'), 'go');
+  assert.equal(text.baseFormHint({ w: 'arm' }, 'arm'), null);
+  assert.equal(text.baseFormHint({ w: 'Sunday' }, 'sunday'), null);
+});
+
 test('text: letterHint', () => {
   assert.equal(text.letterHint('banana'), 'b _ _ _ _ _');
   assert.equal(text.letterHint('T-shirt'), 'T-_ _ _ _ _');

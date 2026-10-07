@@ -617,6 +617,38 @@ try {
     }
   }
 
+  if (want('gapbase')) {
+    // eye is taught, but the sentence needs [eyes]: the blank names the base word; arm needs no note
+    const eye = words.find((w) => w.id === 'eye');
+    const arm = words.find((w) => w.id === 'arm');
+    check(!!eye && !!arm, 'gapbase: words has eye and arm');
+    if (eye && arm) {
+      const card = { b: 5, d: 20500, g: 20490, n: 3, r: 3, l: 0, m: 1, md: 20495 };
+      const leg = {
+        v: 2, day: 20500, done: 0, reasks: {}, newCount: 0, startMiles: 1, ids: [eye.id, arm.id],
+        stats: { right: 0, wrong: 0, taught: 0, known: 0, reviewed: 0, miles: 0 },
+        queue: [
+          { key: 'review-eye', id: eye.id, kind: 'review', type: 'gapType' },
+          { key: 'review-arm', id: arm.id, kind: 'review', type: 'gapType' },
+        ],
+      };
+      await viewport(390, 844, true);
+      await loadWith({ cards: { [eye.id]: card, [arm.id]: card }, leg });
+      await setHash('#/drive');
+      await waitFor(`!!__app.item()`);
+      check(await evaluate(`document.querySelector('.q-base-w')?.textContent === 'eye'`), 'gapbase: eye shows its base word');
+      await shot('m-drive-gapbase');
+      await evaluate(`document.querySelector('.answer-input').focus()`);
+      await send('Input.insertText', { text: 'eyes' });
+      await evaluate(`document.querySelector('.answer-form button').click()`);
+      check(await evaluate(`!!document.querySelector('.fb-right')`), 'gapbase: eyes is right');
+      await evaluate(`document.querySelector('.btn-next').click()`);
+      await waitFor(`__app.item()?.id === 'arm'`);
+      check(await evaluate(`!document.querySelector('.q-base')`), 'gapbase: arm has no base note');
+      await viewport(1366, 768);
+    }
+  }
+
   if (want('say')) {
     // Say it: right at once; a miss then right; a double miss falls back to spell; a mic error too
     const bicycle = words.find((w) => w.w === 'bicycle');
